@@ -43,7 +43,9 @@
             data-projects="<%= dev.projects_count %>"
             data-name="<%= dev.name || dev.github_username %>"
             data-location="<%= dev.location || "" %>"
-            data-open-to-work="<%= dev.open_to_work %>">
+            data-open-to-work="<%= dev.open_to_work %>"
+            data-avatar="<%= dev.avatar_url || "" %>"
+            data-username="<%= dev.github_username %>">
           <div class="developer-header">
             <% avatar_name = (dev.name || dev.github_username).gsub(" ", "+") rescue dev.github_username %>
             <% if dev.avatar_url && !dev.avatar_url.nil? %>

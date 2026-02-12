@@ -387,6 +387,33 @@ main {
   background-color: var(--bg-tertiary);
 }
 
+/* Custom Avatar Marker */
+.custom-avatar-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-avatar-marker div {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.leaflet-marker-icon.custom-avatar-marker:hover div {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+  z-index: 1000;
+}
+
+/* Custom Popup Styling */
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.custom-popup .leaflet-popup-content {
+  margin: 0;
+  padding: 0;
+}
+
 /* Footer */
 footer {
   background-color: var(--bg-primary);
