@@ -131,7 +131,7 @@ main {
   text-decoration: underline;
 }
 
-.hero p {
+.hero p:not(.hero-join-text) {
   font-size: 1.25rem;
   color: var(--text-secondary);
   margin-bottom: 1rem;
