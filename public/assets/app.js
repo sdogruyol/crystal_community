@@ -230,8 +230,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function fitMapToMarkers() {
       if (!markers.length) return;
+      
+      // If only one marker, don't zoom in too much - keep default world view
+      if (markers.length === 1) {
+        // Just center on the marker but keep default zoom level
+        map.setView(markers[0].getLatLng(), 2);
+        return;
+      }
+      
+      // For multiple markers, fit bounds but set max zoom to prevent over-zooming
       const group = L.featureGroup(markers);
-      map.fitBounds(group.getBounds().pad(0.2));
+      map.fitBounds(group.getBounds().pad(0.2), {
+        maxZoom: 10  // Prevent zooming in too much even with multiple markers
+      });
     }
 
     function geocodeLocation(location) {
