@@ -15,17 +15,22 @@ module CrystalCommunity::DB
   end
 
   # Get database URL from environment variable or use default
-  URL  = ENV["DATABASE_URL"]
+  URL = ENV["DATABASE_URL"]
 
-  # Create database connection
-  def connection
-    DB.open(url)
-  end
-
-  # Execute a block with a database connection
-  def with_connection(&block)
-    DB.open(url) do |db|
-      yield db
+  SQL = begin
+    masked_uri = URI.parse(URL)
+    if (user = masked_uri.user) && !user.blank?
+      masked_uri.user = "REDACTED"
     end
+    if (password = masked_uri.password) && !password.blank?
+      masked_uri.password = "REDACTED"
+    end
+    Log.info(&.emit("Connecting to #{masked_uri}", event: "db_connect"))
+    ::DB.open(URL)
   end
+
+  SQL.query_one(
+    "SELECT count(1)",
+    as: Int64
+  )
 end

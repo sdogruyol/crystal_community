@@ -6,15 +6,34 @@
   </p>
 </section>
 
-<section class="trending">
-  <h2>Trending today</h2>
+<section class="developers">
+  <h2>Developers</h2>
 
-  <% if trending_developers.empty? %>
-    <p>No trending developers yet. Stay tuned!</p>
+  <% if developers.empty? %>
+    <p>No developers yet. Be the first to join!</p>
   <% else %>
-    <ul>
-      <% trending_developers.each do |dev| %>
-        <li><%= dev %></li>
+    <ul class="developer-list">
+      <% developers.each do |dev| %>
+        <li class="developer-card">
+          <div class="developer-main">
+            <strong><%= dev.name || dev.github_username %></strong>
+            <% if dev.admin? %>
+              <span class="badge badge-admin">Admin</span>
+            <% end %>
+          </div>
+          <div class="developer-meta">
+            <span>@<%= dev.github_username %></span>
+            <% if dev.location %>
+              <span>· <%= dev.location %></span>
+            <% end %>
+            <% if dev.open_to_work %>
+              <span class="badge badge-open-to-work">Open to work</span>
+            <% end %>
+          </div>
+          <% if dev.bio %>
+            <p class="developer-bio"><%= dev.bio %></p>
+          <% end %>
+        </li>
       <% end %>
     </ul>
   <% end %>
