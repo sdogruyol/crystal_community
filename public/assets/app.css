@@ -101,11 +101,21 @@ main {
   margin-bottom: 0;
 }
 
-.hero h1 {
-  font-size: 3rem;
-  font-weight: 700;
+.hero-join-text {
+  font-size: 1.75rem;
+  color: var(--text-secondary);
   margin-bottom: 1rem;
-  color: var(--text-primary);
+}
+
+.hero-join-text .crystal-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.hero-join-text .crystal-link:hover {
+  text-decoration: underline;
 }
 
 .hero p {
