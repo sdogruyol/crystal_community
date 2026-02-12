@@ -1,0 +1,17 @@
+name: crystal-community
+version: 0.1.0
+
+authors:
+  - Serdar Dogruyol <990485+sdogruyol@users.noreply.github.com>
+
+targets:
+  crystal-community:
+    main: src/app.cr
+
+dependencies:
+  kemal:
+    github: kemalcr/kemal
+
+crystal: '>= 1.19.1'
+
+license: MIT

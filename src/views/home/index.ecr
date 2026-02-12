@@ -1,0 +1,22 @@
+<section class="hero">
+  <h1>Crystal Community</h1>
+  <p>
+    Join <strong><%= total_developers %></strong> developers from around the world
+    who are passionate about Crystal.
+  </p>
+</section>
+
+<section class="trending">
+  <h2>Trending today</h2>
+
+  <% if trending_developers.empty? %>
+    <p>No trending developers yet. Stay tuned!</p>
+  <% else %>
+    <ul>
+      <% trending_developers.each do |dev| %>
+        <li><%= dev %></li>
+      <% end %>
+    </ul>
+  <% end %>
+</section>
+
