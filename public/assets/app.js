@@ -266,18 +266,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return Promise.resolve(cached);
       }
 
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`;
+      const url = `/api/geocode?q=${encodeURIComponent(location)}`;
 
-      return fetch(url, {
-        headers: {
-          'Accept-Language': 'en',
-        },
-      })
-        .then(response => response.json())
-        .then(results => {
-          if (!Array.isArray(results) || !results.length) return null;
-          const { lat, lon } = results[0];
-          const point = [parseFloat(lat), parseFloat(lon)];
+      return fetch(url)
+        .then(response => {
+          if (!response.ok) return null;
+          return response.json();
+        })
+        .then(data => {
+          if (!data || data.lat == null || data.lon == null) return null;
+          const point = [Number(data.lat), Number(data.lon)];
           geoCache[location] = point;
           return point;
         })

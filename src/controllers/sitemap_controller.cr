@@ -6,10 +6,10 @@ class CrystalCommunity::SitemapController
     host = env.request.headers["Host"]? || "localhost:3000"
     scheme = env.request.headers["X-Forwarded-Proto"]? || "http"
     base_url = "#{scheme}://#{host}"
-    
+
     # Get current date in ISO 8601 format
     lastmod = Time.local.to_s("%Y-%m-%d")
-    
+
     # Build sitemap XML
     sitemap = <<-XML
 <?xml version="1.0" encoding="UTF-8"?>
@@ -22,7 +22,7 @@ class CrystalCommunity::SitemapController
   </url>
 </urlset>
 XML
-    
+
     env.response.content_type = "application/xml"
     env.response.headers["Cache-Control"] = "public, max-age=3600"
     sitemap
