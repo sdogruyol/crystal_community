@@ -1,26 +1,29 @@
-<section id="community-map-section">
+
+
+<section id="community-map-section" aria-label="Community Map">
   <div id="community-map">
     <p class="loading">Loading community map...</p>
   </div>
 </section>
 
-<section class="hero">
+<section class="hero" aria-labelledby="hero-heading">
+  <h1 id="hero-heading" class="visually-hidden">Crystal Community - Connect with Developers Worldwide</h1>
   <p class="hero-join-text">
     Join <strong><%= total_developers %></strong> developers from around the world
     who are passionate about <a href="https://crystal-lang.org" target="_blank" rel="noopener noreferrer" class="crystal-link">Crystal</a>.
   </p>
   <p>
-    <a href="/users/auth/github" class="join-button">Sign in with GitHub to appear on this page →</a>
+    <a href="/users/auth/github" class="join-button" aria-label="Sign in with GitHub to join the Crystal Community">Sign in with GitHub to appear on this page →</a>
   </p>
 </section>
 
-<section class="developers">
-  <h2>Developers</h2>
+<section class="developers" aria-labelledby="developers-heading">
+  <h2 id="developers-heading">Crystal Developers</h2>
 
   <% if developers.empty? %>
-    <div class="empty-state">
+    <div class="empty-state" role="status" aria-live="polite">
       <p>No developers yet. Be the first to join!</p>
-      <a href="/users/auth/github" class="join-button">Join Now</a>
+      <a href="/users/auth/github" class="join-button" aria-label="Join the Crystal Community">Join Now</a>
     </div>
   <% else %>
     <ul class="developer-list">
@@ -37,22 +40,24 @@
             <% avatar_name = (dev.name || dev.github_username).gsub(" ", "+") rescue dev.github_username %>
             <% if dev.avatar_url && !dev.avatar_url.nil? %>
               <img src="<%= dev.avatar_url %>" 
-                   alt="<%= dev.name || dev.github_username %>" 
+                   alt="Profile picture of <%= dev.name || dev.github_username %>" 
                    class="developer-avatar"
+                   loading="lazy"
                    onerror="this.src='https://ui-avatars.com/api/?name=<%= avatar_name %>&size=64&background=000000&color=fff'">
             <% else %>
               <img src="https://ui-avatars.com/api/?name=<%= avatar_name %>&size=64&background=000000&color=fff" 
-                   alt="<%= dev.name || dev.github_username %>" 
-                   class="developer-avatar">
+                   alt="Profile picture of <%= dev.name || dev.github_username %>" 
+                   class="developer-avatar"
+                   loading="lazy">
             <% end %>
             <div class="developer-info">
               <div class="developer-name">
                 <%= dev.name || dev.github_username %>
                 <% if dev.admin? %>
-                  <span class="badge badge-admin">Admin</span>
+                  <span class="badge badge-admin" aria-label="Administrator">Admin</span>
                 <% end %>
                 <% if dev.score > 0 %>
-                  <span class="score-badge <%= dev.score > 0 ? "positive" : "" %>">
+                  <span class="score-badge <%= dev.score > 0 ? "positive" : "" %>" aria-label="Community score: <%= dev.score %>">
                     <%= dev.score > 0 ? "+" : "" %><%= dev.score %>
                   </span>
                 <% end %>
@@ -63,7 +68,7 @@
                   <span><%= dev.location %></span>
                 <% end %>
                 <% if dev.open_to_work %>
-                  <span class="badge badge-open-to-work">Open to work</span>
+                  <span class="badge badge-open-to-work" aria-label="Open to work opportunities">Open to work</span>
                 <% end %>
               </div>
             </div>

@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Disallow admin/auth routes
+Disallow: /users/auth/
+
+# Sitemap (update with your actual domain)
+Sitemap: /sitemap.xml

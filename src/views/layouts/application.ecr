@@ -2,13 +2,62 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Crystal Community</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Join developers from around the world who are passionate about Crystal." />
-    <!-- Roboto Font from Google Fonts -->
+    
+    <% 
+      # SEO metadata - variables should be defined in the view file
+      # Defaults are set here as fallback
+      page_title = "Crystal Community - Connect with Crystal Developers Worldwide"
+      page_description = "Join developers from around the world who are passionate about Crystal programming language. Discover Crystal developers, connect with the community, and explore projects."
+      request_url = "/"
+      canonical_url = request_url
+      og_url = request_url
+      og_title = page_title
+      og_description = page_description
+      og_image = "/assets/android-chrome-512x512.png"
+      twitter_url = request_url
+      twitter_title = page_title
+      twitter_description = page_description
+      twitter_image = "/assets/android-chrome-512x512.png"
+    %>
+    
+    <!-- Primary Meta Tags -->
+    <title><%= page_title %></title>
+    <meta name="title" content="<%= page_title %>" />
+    <meta name="description" content="<%= page_description %>" />
+    <meta name="keywords" content="Crystal, Crystal programming language, Crystal developers, Crystal community, Crystal lang, Kemal, Crystal framework, open source, developers" />
+    <meta name="author" content="Crystal Community" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="English" />
+    <meta name="revisit-after" content="7 days" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="<%= canonical_url %>" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="<%= og_url %>" />
+    <meta property="og:title" content="<%= og_title %>" />
+    <meta property="og:description" content="<%= og_description %>" />
+    <meta property="og:image" content="<%= og_image %>" />
+    <meta property="og:site_name" content="Crystal Community" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="<%= twitter_url %>" />
+    <meta name="twitter:title" content="<%= twitter_title %>" />
+    <meta name="twitter:description" content="<%= twitter_description %>" />
+    <meta name="twitter:image" content="<%= twitter_image %>" />
+    <meta name="twitter:site" content="@CrystalLanguage" />
+    
+    <!-- Preconnect for Performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400&display=swap" rel="stylesheet" />
+    
     <!-- Leaflet CSS for map -->
     <link
       rel="stylesheet"
@@ -17,19 +66,20 @@
       crossorigin=""
     />
 
+    <!-- Favicons -->
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
     <link rel="manifest" href="/assets/site.webmanifest">
 
-
+    <!-- Stylesheet -->
     <link rel="stylesheet" href="/assets/app.css" />
   </head>
   <body>
-    <header>
-      <nav>
-        <a href="/" class="nav-logo">
-          <img src="/assets/crystal_icon.svg" alt="Crystal" class="crystal-icon" />
+    <header role="banner">
+      <nav role="navigation" aria-label="Main navigation">
+        <a href="/" class="nav-logo" aria-label="Crystal Community Home">
+          <img src="/assets/crystal_icon.svg" alt="Crystal Programming Language Logo" class="crystal-icon" width="32" height="32" />
           Crystal Community
         </a>
       </nav>
@@ -39,15 +89,15 @@
       <%= content %>
     </main>
 
-    <footer>
+    <footer role="contentinfo">
       <p>
-        &copy; <%= Time.local.year %> Crystal Community by <a href="https://serdardogruyol.com" target="_blank" rel="noopener">Serdar Doğruyol</a>.
+        &copy; <%= Time.local.year %> Crystal Community by <a href="https://serdardogruyol.com" target="_blank" rel="noopener noreferrer">Serdar Doğruyol</a>.
       </p>
       <p>
-        Built with <a href="https://crystal-lang.org" target="_blank" rel="noopener">Crystal 1.19.1</a> and <a href="https://kemalcr.com" target="_blank" rel="noopener">Kemal 1.9.0</a>.
+        Built with <a href="https://crystal-lang.org" target="_blank" rel="noopener noreferrer">Crystal 1.19.1</a> and <a href="https://kemalcr.com" target="_blank" rel="noopener noreferrer">Kemal 1.9.0</a>.
       </p>
       <p>
-        This project is open source — <a href="https://github.com/sdogruyol/crystal_community" target="_blank" rel="noopener">contribute on GitHub</a>.
+        This project is open source — <a href="https://github.com/sdogruyol/crystal_community" target="_blank" rel="noopener noreferrer">contribute on GitHub</a>.
       </p>
     </footer>
     <!-- Leaflet JS for map -->
