@@ -26,17 +26,14 @@
     </main>
 
     <footer>
-      <p>&copy; <%= Time.local.year %> Crystal Community</p>
       <p>
-        Built with ❤️ in Crystal
-        <% if ENV["GITHUB_REPO"]? %>
-          — <a href="<%= ENV["GITHUB_REPO"] %>" target="_blank" rel="noopener">contribute on GitHub</a>
-        <% end %>
+        &copy; <%= Time.local.year %> Crystal Community by <a href="https://github.com/sdogruyol" target="_blank" rel="noopener">Serdar Doğruyol</a>.
       </p>
       <p>
-        <a href="/privacy">Privacy</a> • 
-        <a href="/terms">Terms</a> • 
-        <a href="/legal">Legal</a>
+        Built with <a href="https://crystal-lang.org" target="_blank" rel="noopener">Crystal 1.19.1</a> and <a href="https://kemalcr.com" target="_blank" rel="noopener">Kemal 1.9.0</a>.
+      </p>
+      <p>
+        This project is open source — <a href="https://github.com/sdogruyol/crystal_community" target="_blank" rel="noopener">contribute on GitHub</a>.
       </p>
     </footer>
     <!-- Leaflet JS for map -->
