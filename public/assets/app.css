@@ -6,16 +6,17 @@
 }
 
 :root {
-  --primary-color: #e11d48;
-  --primary-hover: #be185d;
-  --text-primary: #1f2937;
-  --text-secondary: #6b7280;
-  --text-muted: #9ca3af;
-  --bg-primary: #ffffff;
-  --bg-secondary: #f9fafb;
-  --bg-tertiary: #f3f4f6;
-  --border-color: #e5e7eb;
-  --success-color: #10b981;
+  /* Crystal Brand Colors */
+  --primary-color: #000000; /* Black */
+  --primary-hover: #333333; /* Darker black for hover */
+  --text-primary: #000000; /* Black */
+  --text-secondary: #777777; /* Gray */
+  --text-muted: #999999; /* Lighter gray */
+  --bg-primary: #ffffff; /* White */
+  --bg-secondary: #fafafa; /* Very light gray */
+  --bg-tertiary: #f5f5f5; /* Light gray */
+  --border-color: #e0e0e0; /* Light border */
+  --success-color: #10b981; /* Keep green for success states */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
@@ -24,7 +25,7 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   line-height: 1.6;
   color: var(--text-primary);
   background-color: var(--bg-secondary);

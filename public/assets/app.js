@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Create a fallback avatar URL if none provided
       const avatarName = (name || username || 'User').replace(/\s+/g, '+');
-      const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarName)}&size=64&background=e11d48&color=fff`;
+      const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarName)}&size=64&background=000000&color=fff`;
       const finalAvatarUrl = avatarUrl || fallbackUrl;
 
       // Create HTML string for the icon
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
           border: 3px solid #ffffff;
           box-shadow: 0 2px 8px rgba(0,0,0,0.3);
           overflow: hidden;
-          background-color: #e11d48;
+          background-color: #000000;
           background-image: url('${finalAvatarUrl}');
           background-size: cover;
           background-position: center;
@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Create popup HTML with avatar
       const avatarName = (name || username || 'User').replace(/\s+/g, '+');
-      const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarName)}&size=64&background=e11d48&color=fff`;
+      const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarName)}&size=64&background=000000&color=fff`;
       const finalAvatarUrl = avatarUrl || fallbackAvatar;
 
       const githubUrl = username ? `https://github.com/${username}` : null;
@@ -176,11 +176,11 @@ document.addEventListener('DOMContentLoaded', function() {
         <div style="text-align: center; min-width: 180px;">
           <img src="${finalAvatarUrl}" 
                alt="${name}" 
-               style="width: 48px; height: 48px; border-radius: 50%; border: 2px solid #e11d48; margin-bottom: 8px; object-fit: cover;">
+               style="width: 48px; height: 48px; border-radius: 50%; border: 2px solid #000000; margin-bottom: 8px; object-fit: cover;">
           <div>
             <strong style="display: block; margin-bottom: 4px;">${name}</strong>
-            ${username ? `<span style="color: #6b7280; font-size: 0.875rem;">@${username}</span><br/>` : ''}
-            ${location ? `<span style="color: #6b7280; font-size: 0.875rem;">${location}</span><br/>` : ''}
+            ${username ? `<span style="color: #777777; font-size: 0.875rem;">@${username}</span><br/>` : ''}
+            ${location ? `<span style="color: #777777; font-size: 0.875rem;">${location}</span><br/>` : ''}
             ${openToWork ? '<span style="color:#10b981;font-weight:600;font-size:0.75rem;margin-top:4px;display:inline-block;">Open to work</span><br/>' : ''}
             ${
               githubUrl
