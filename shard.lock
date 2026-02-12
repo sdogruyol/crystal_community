@@ -24,6 +24,10 @@ shards:
     git: https://github.com/kemalcr/kemal.git
     version: 1.9.0
 
+  kemal-session:
+    git: https://github.com/kemalcr/kemal-session.git
+    version: 1.4.0
+
   micrate:
     git: https://github.com/amberframework/micrate.git
     version: 0.15.1

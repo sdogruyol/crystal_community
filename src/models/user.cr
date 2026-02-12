@@ -60,5 +60,14 @@ module CrystalCommunity::DB
     def self.count : Int64
       SQL.scalar("SELECT COUNT(*) FROM users").as(Int64)
     end
+
+    # Update user from GitHub data
+    def self.update_from_github(id : Int64, name : String?, bio : String?, location : String?, avatar_url : String?) : User?
+      SQL.exec(
+        "UPDATE users SET name = $1, bio = $2, location = $3, avatar_url = $4, updated_at = $5 WHERE id = $6",
+        name, bio, location, avatar_url, Time.utc, id
+      )
+      find(id)
+    end
   end
 end

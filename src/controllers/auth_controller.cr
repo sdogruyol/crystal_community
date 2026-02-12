@@ -1,0 +1,174 @@
+require "kemal"
+require "http/client"
+require "json"
+require "random/secure"
+
+class CrystalCommunity::AuthController
+  GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize"
+  GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
+  GITHUB_USER_URL = "https://api.github.com/user"
+
+  # Redirect to GitHub OAuth
+  def self.github(env)
+    client_id = ENV["GITHUB_CLIENT_ID"]? || raise "GITHUB_CLIENT_ID not set"
+    
+    # Build redirect URI
+    host = env.request.headers["Host"]? || "localhost:3000"
+    scheme = env.request.headers["X-Forwarded-Proto"]? || "http"
+    redirect_uri = "#{scheme}://#{host}/users/auth/github/callback"
+    
+    # Generate state for CSRF protection
+    state = Random::Secure.hex(32)
+    env.session.string("oauth_state", state)
+    
+    # Build GitHub OAuth URL
+    params = URI::Params.encode({
+      "client_id"    => client_id,
+      "redirect_uri" => redirect_uri,
+      "scope"        => "read:user user:email",
+      "state"        => state,
+    })
+    
+    github_url = "#{GITHUB_AUTHORIZE_URL}?#{params}"
+    env.redirect github_url
+  end
+
+  # Handle GitHub OAuth callback
+  def self.github_callback(env)
+    code = env.params.query["code"]?
+    state = env.params.query["state"]?
+    stored_state = env.session.string?("oauth_state")
+    
+    # Verify state to prevent CSRF attacks
+    if state.nil? || stored_state.nil? || state != stored_state
+      env.response.status_code = 400
+      return "Invalid state parameter"
+    end
+    
+    # Clear state from session
+    env.session.delete_string("oauth_state")
+    
+    if code.nil?
+      env.response.status_code = 400
+      return "Missing authorization code"
+    end
+    
+    # Exchange code for access token
+    access_token = exchange_code_for_token(code, env)
+    if access_token.nil?
+      env.response.status_code = 500
+      return "Failed to obtain access token"
+    end
+    
+    # Get user info from GitHub
+    user_data = get_github_user(access_token)
+    if user_data.nil?
+      env.response.status_code = 500
+      return "Failed to fetch user data"
+    end
+    
+    # Find or create user
+    github_id = user_data["id"].as_i.to_s
+    github_username = user_data["login"].as_s
+    name = user_data["name"]?.try(&.as_s)
+    bio = user_data["bio"]?.try(&.as_s)
+    location = user_data["location"]?.try(&.as_s)
+    avatar_url = user_data["avatar_url"]?.try(&.as_s)
+    
+    user = CrystalCommunity::DB::User.find_by_github_id(github_id)
+    
+    if user.nil?
+      # Create new user
+      user = CrystalCommunity::DB::User.create(
+        github_id: github_id,
+        github_username: github_username,
+        name: name,
+        bio: bio,
+        location: location,
+        avatar_url: avatar_url,
+        open_to_work: false,
+        role: "developer",
+        score: 0,
+        projects_count: 0,
+        posts_count: 0,
+        comments_count: 0,
+        stars_count: 0
+      )
+    else
+      # Update existing user with latest GitHub data
+      updated_user = CrystalCommunity::DB::User.update_from_github(
+        user.id.not_nil!,
+        name,
+        bio,
+        location,
+        avatar_url
+      )
+      user = updated_user if updated_user
+    end
+    
+    # Set user session
+    env.session.int("user_id", user.id.not_nil!.to_i)
+    
+    # Redirect to home page
+    env.redirect "/"
+  end
+
+  private def self.exchange_code_for_token(code : String, env) : String?
+    client_id = ENV["GITHUB_CLIENT_ID"]? || raise "GITHUB_CLIENT_ID not set"
+    client_secret = ENV["GITHUB_CLIENT_SECRET"]? || raise "GITHUB_CLIENT_SECRET not set"
+    
+    # Build redirect URI (must match the one used in github method)
+    host = env.request.headers["Host"]? || "localhost:3000"
+    scheme = env.request.headers["X-Forwarded-Proto"]? || "http"
+    redirect_uri = "#{scheme}://#{host}/users/auth/github/callback"
+    
+    body = URI::Params.encode({
+      "client_id"     => client_id,
+      "client_secret" => client_secret,
+      "code"          => code,
+      "redirect_uri"  => redirect_uri,
+    })
+    
+    headers = HTTP::Headers{
+      "Accept"       => "application/json",
+      "Content-Type" => "application/x-www-form-urlencoded",
+    }
+    
+    response = HTTP::Client.post(
+      GITHUB_TOKEN_URL,
+      headers: headers,
+      body: body
+    )
+    
+    if response.status_code == 200
+      json = JSON.parse(response.body)
+      json["access_token"]?.try(&.as_s)
+    else
+      nil
+    end
+  rescue
+    nil
+  end
+
+  private def self.get_github_user(access_token : String) : JSON::Any?
+    headers = HTTP::Headers{
+      "Authorization" => "Bearer #{access_token}",
+      "Accept"        => "application/vnd.github.v3+json",
+      "User-Agent"    => "CrystalCommunity",
+    }
+    
+    response = HTTP::Client.get(
+      GITHUB_USER_URL,
+      headers: headers
+    )
+    
+    if response.status_code == 200
+      JSON.parse(response.body)
+    else
+      nil
+    end
+  rescue
+    nil
+  end
+
+end
