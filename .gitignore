@@ -3,3 +3,8 @@
 /bin/
 /.shards/
 *.dwarf
+
+# Database
+*.db
+*.sqlite
+*.sqlite3

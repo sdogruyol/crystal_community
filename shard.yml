@@ -11,6 +11,12 @@ targets:
 dependencies:
   kemal:
     github: kemalcr/kemal
+  micrate:
+    github: amberframework/micrate
+  db:
+    github: crystal-lang/crystal-db
+  pg:
+    github: will/crystal-pg
 
 crystal: '>= 1.19.1'
 
