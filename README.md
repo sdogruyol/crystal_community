@@ -12,7 +12,23 @@ TODO: Write usage instructions here
 
 ## Development
 
-TODO: Write development instructions here
+### Auto reload (sentry.cr)
+
+This project uses [sentry.cr](https://github.com/samueleaton/sentry) for automatic rebuild/restart during development.
+
+Installation (from project root directory):
+
+```bash
+curl -fsSLo- https://raw.githubusercontent.com/samueleaton/sentry/master/install.cr | crystal eval
+```
+
+Then run the `./sentry` command:
+
+```bash
+./sentry --install
+```
+
+The `.sentry.yml` file in this repo is configured to build `src/app.cr` and run the `./crystal-community` binary, watching `src/**/*.cr` and `src/**/*.ecr` files.
 
 ## Contributing
 

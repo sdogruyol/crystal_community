@@ -11,3 +11,11 @@
 
 # Environment files
 .env*
+
+# Sentry
+sentry
+dev/
+
+# Binaries
+bin/
+crystal-community

@@ -1,0 +1,15 @@
+display_name: crystal-community
+info: true
+
+# Command used to build the application
+build: crystal build ./src/app.cr -o ./crystal-community
+build_args:
+
+# Command used to run the compiled binary
+run: ./crystal-community
+run_args:
+
+# File/directory patterns to watch
+watch:
+  - ./src/**/*.cr
+  - ./src/**/*.ecr
