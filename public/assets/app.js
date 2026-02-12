@@ -64,6 +64,21 @@ document.addEventListener('DOMContentLoaded', function() {
       cards.forEach(card => container.appendChild(card));
     });
   }
+
+  // Make developer cards clickable - navigate to GitHub profile
+  developerCards.forEach(card => {
+    card.addEventListener('click', function(e) {
+      // Don't navigate if clicking on a link or button inside the card
+      if (e.target.tagName === 'A' || e.target.closest('a')) {
+        return;
+      }
+      
+      const username = this.dataset.username;
+      if (username) {
+        window.open(`https://github.com/${username}`, '_blank', 'noopener,noreferrer');
+      }
+    });
+  });
   
   // Smooth scroll for anchor links
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
