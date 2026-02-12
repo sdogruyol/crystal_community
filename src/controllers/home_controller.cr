@@ -1,6 +1,6 @@
 require "kemal"
 
-class HomeController
+class CrystalCommunity::HomeController
   # Home page action
   def self.index(env)
     # In the future data will come from the DB; for now we use dummy values
@@ -11,4 +11,3 @@ class HomeController
     render "src/views/home/index.ecr", "src/views/layouts/application.ecr"
   end
 end
-

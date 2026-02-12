@@ -7,6 +7,8 @@ authors:
 targets:
   crystal-community:
     main: src/app.cr
+  micrate:
+    main: src/micrate.cr
 
 dependencies:
   kemal:
@@ -17,6 +19,8 @@ dependencies:
     github: crystal-lang/crystal-db
   pg:
     github: will/crystal-pg
+  dotenv:
+    github: gdotdesign/cr-dotenv
 
 crystal: '>= 1.19.1'
 
