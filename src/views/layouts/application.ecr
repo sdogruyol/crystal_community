@@ -4,14 +4,17 @@
     <meta charset="utf-8" />
     <title>Crystal Community</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Join developers from around the world who are passionate about Crystal." />
     <link rel="stylesheet" href="/assets/app.css" />
   </head>
   <body>
     <header>
       <nav>
         <a href="/">Crystal Community</a>
-        <a href="/developers">Developers</a>
-        <a href="/projects">Projects</a>
+        <div>
+          <a href="/developers">Developers</a>
+          <a href="/projects">Projects</a>
+        </div>
       </nav>
     </header>
 
@@ -21,7 +24,19 @@
 
     <footer>
       <p>&copy; <%= Time.local.year %> Crystal Community</p>
+      <p>
+        Built with ❤️ in Crystal
+        <% if ENV["GITHUB_REPO"]? %>
+          — <a href="<%= ENV["GITHUB_REPO"] %>" target="_blank" rel="noopener">contribute on GitHub</a>
+        <% end %>
+      </p>
+      <p>
+        <a href="/privacy">Privacy</a> • 
+        <a href="/terms">Terms</a> • 
+        <a href="/legal">Legal</a>
+      </p>
     </footer>
+    <script src="/assets/app.js"></script>
   </body>
 </html>
 

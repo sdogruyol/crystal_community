@@ -4,35 +4,101 @@
     Join <strong><%= total_developers %></strong> developers from around the world
     who are passionate about Crystal.
   </p>
+  <p>
+    <a href="/auth/github" class="join-button">Sign in with GitHub to appear on this page →</a>
+  </p>
 </section>
 
 <section class="developers">
+  <div class="filters">
+    <div class="filter-group">
+      <button class="filter-button active" data-filter="all">All</button>
+      <button class="filter-button" data-filter="open-to-work">Open to work</button>
+    </div>
+    <select id="sort-select" class="filter-button" style="padding: 0.5rem 1rem;">
+      <option value="score">Sort by Score</option>
+      <option value="projects">Sort by Projects</option>
+      <option value="name">Sort by Name</option>
+    </select>
+  </div>
+
   <h2>Developers</h2>
 
   <% if developers.empty? %>
-    <p>No developers yet. Be the first to join!</p>
+    <div class="empty-state">
+      <p>No developers yet. Be the first to join!</p>
+      <a href="/auth/github" class="join-button">Join Now</a>
+    </div>
   <% else %>
     <ul class="developer-list">
       <% developers.each do |dev| %>
-        <li class="developer-card">
-          <div class="developer-main">
-            <strong><%= dev.name || dev.github_username %></strong>
-            <% if dev.admin? %>
-              <span class="badge badge-admin">Admin</span>
+        <li class="developer-card" 
+            data-score="<%= dev.score %>" 
+            data-projects="<%= dev.projects_count %>">
+          <div class="developer-header">
+            <% avatar_name = (dev.name || dev.github_username).gsub(" ", "+") rescue dev.github_username %>
+            <% if dev.avatar_url && !dev.avatar_url.nil? %>
+              <img src="<%= dev.avatar_url %>" 
+                   alt="<%= dev.name || dev.github_username %>" 
+                   class="developer-avatar"
+                   onerror="this.src='https://ui-avatars.com/api/?name=<%= avatar_name %>&size=64&background=e11d48&color=fff'">
+            <% else %>
+              <img src="https://ui-avatars.com/api/?name=<%= avatar_name %>&size=64&background=e11d48&color=fff" 
+                   alt="<%= dev.name || dev.github_username %>" 
+                   class="developer-avatar">
             <% end %>
-          </div>
-          <div class="developer-meta">
-            <span>@<%= dev.github_username %></span>
-            <% if dev.location %>
-              <span>· <%= dev.location %></span>
-            <% end %>
-            <% if dev.open_to_work %>
-              <span class="badge badge-open-to-work">Open to work</span>
-            <% end %>
+            <div class="developer-info">
+              <div class="developer-name">
+                <%= dev.name || dev.github_username %>
+                <% if dev.admin? %>
+                  <span class="badge badge-admin">Admin</span>
+                <% end %>
+                <% if dev.score > 0 %>
+                  <span class="score-badge <%= dev.score > 0 ? "positive" : "" %>">
+                    <%= dev.score > 0 ? "+" : "" %><%= dev.score %>
+                  </span>
+                <% end %>
+              </div>
+              <div class="developer-username">@<%= dev.github_username %></div>
+              <div class="developer-meta">
+                <% if dev.location %>
+                  <span><%= dev.location %></span>
+                <% end %>
+                <% if dev.open_to_work %>
+                  <span class="badge badge-open-to-work">Open to work</span>
+                <% end %>
+              </div>
+            </div>
           </div>
           <% if dev.bio %>
             <p class="developer-bio"><%= dev.bio %></p>
           <% end %>
+          <div class="developer-stats">
+            <% if dev.projects_count > 0 %>
+              <div class="stat-item">
+                <span class="stat-value"><%= dev.projects_count %></span>
+                <span>Projects</span>
+              </div>
+            <% end %>
+            <% if dev.posts_count > 0 %>
+              <div class="stat-item">
+                <span class="stat-value"><%= dev.posts_count %></span>
+                <span>Posts</span>
+              </div>
+            <% end %>
+            <% if dev.comments_count > 0 %>
+              <div class="stat-item">
+                <span class="stat-value"><%= dev.comments_count %></span>
+                <span>Comments</span>
+              </div>
+            <% end %>
+            <% if dev.stars_count > 0 %>
+              <div class="stat-item">
+                <span class="stat-value"><%= dev.stars_count %></span>
+                <span>Stars</span>
+              </div>
+            <% end %>
+          </div>
         </li>
       <% end %>
     </ul>
