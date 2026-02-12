@@ -520,6 +520,11 @@ footer a:hover {
     height: 1.5rem;
   }
 
+  .join-button {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+  }
+
   .filters {
     flex-direction: column;
     align-items: stretch;
