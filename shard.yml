@@ -21,6 +21,8 @@ dependencies:
     github: will/crystal-pg
   dotenv:
     github: gdotdesign/cr-dotenv
+  faker:
+    github: askn/faker
 
 crystal: '>= 1.19.1'
 

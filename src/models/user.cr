@@ -45,27 +45,10 @@ module CrystalCommunity::DB
 
     # Create a new user
     def self.create(**args) : User
-      user = User.new(**args)
-      user.save
-      user
-    end
-
-    # Save user to database
-    def save : User
-      if @id
-        # Update existing user
-        SQL.exec(
-          "UPDATE users SET github_id = $1, github_username = $2, name = $3, bio = $4, location = $5, avatar_url = $6, open_to_work = $7, role = $8, score = $9, projects_count = $10, posts_count = $11, comments_count = $12, stars_count = $13, updated_at = $14 WHERE id = $15",
-          @github_id, @github_username, @name, @bio, @location, @avatar_url, @open_to_work, @role, @score, @projects_count, @posts_count, @comments_count, @stars_count, Time.utc, @id
-        )
-      else
-        # Insert new user
-        @id = SQL.scalar(
-          "INSERT INTO users (github_id, github_username, name, bio, location, avatar_url, open_to_work, role, score, projects_count, posts_count, comments_count, stars_count, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id",
-          @github_id, @github_username, @name, @bio, @location, @avatar_url, @open_to_work, @role, @score, @projects_count, @posts_count, @comments_count, @stars_count, Time.utc, Time.utc
-        ).as(Int64)
-      end
-      self
+      SQL.query_one(
+        "INSERT INTO users (github_id, github_username, name, bio, location, avatar_url, open_to_work, role, score, projects_count, posts_count, comments_count, stars_count, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *",
+        args[:github_id], args[:github_username], args[:name], args[:bio], args[:location], args[:avatar_url], args[:open_to_work], args[:role], args[:score], args[:projects_count], args[:posts_count], args[:comments_count], args[:stars_count], Time.utc, Time.utc, as: User
+      )
     end
 
     # Get all users

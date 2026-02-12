@@ -15,4 +15,3 @@ require "../models/*"
 
 # Load routes
 require "../routes/web"
-
