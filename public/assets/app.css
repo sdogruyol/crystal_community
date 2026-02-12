@@ -47,13 +47,17 @@ body {
 
 /* Header */
 header {
+  position: sticky;
+  top: 0;
+  z-index: 1100;
   background-color: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   padding: 1rem 0;
-  position: sticky;
-  top: 0;
-  z-index: 100;
   box-shadow: var(--shadow-sm);
+  /* Ensure sticky works in Safari / WebKit */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  isolation: isolate;
 }
 
 nav {
