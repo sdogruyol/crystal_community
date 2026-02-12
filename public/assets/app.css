@@ -85,8 +85,8 @@ main {
 /* Hero Section */
 .hero {
   text-align: center;
-  padding: 4rem 0;
-  margin-bottom: 3rem;
+  padding: 4rem 0 1rem 0;
+  margin-bottom: 0;
 }
 
 .hero h1 {
@@ -99,7 +99,7 @@ main {
 .hero p {
   font-size: 1.25rem;
   color: var(--text-secondary);
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .hero strong {
@@ -176,7 +176,7 @@ main {
 
 /* Developers Grid */
 .developers {
-  margin-top: 3rem;
+  margin-top: 0;
 }
 
 .developers h2 {
@@ -341,7 +341,7 @@ main {
 /* Map Section */
 #community-map-section {
   margin-top: 2rem;
-  margin-bottom: 3rem;
+  margin-bottom: 0;
 }
 
 .map-header {
