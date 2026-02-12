@@ -1,3 +1,9 @@
+<section id="community-map-section">
+  <div id="community-map">
+    <p class="loading">Loading community map...</p>
+  </div>
+</section>
+
 <section class="hero">
   <h1>Crystal Community</h1>
   <p>
@@ -34,7 +40,10 @@
       <% developers.each do |dev| %>
         <li class="developer-card" 
             data-score="<%= dev.score %>" 
-            data-projects="<%= dev.projects_count %>">
+            data-projects="<%= dev.projects_count %>"
+            data-name="<%= dev.name || dev.github_username %>"
+            data-location="<%= dev.location || "" %>"
+            data-open-to-work="<%= dev.open_to_work %>">
           <div class="developer-header">
             <% avatar_name = (dev.name || dev.github_username).gsub(" ", "+") rescue dev.github_username %>
             <% if dev.avatar_url && !dev.avatar_url.nil? %>

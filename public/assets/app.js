@@ -98,4 +98,85 @@ document.addEventListener('DOMContentLoaded', function() {
       imageObserver.observe(img);
     });
   }
+
+  // Community map with Leaflet
+  const mapElement = document.getElementById('community-map');
+  if (mapElement && window.L) {
+    const map = L.map('community-map', {
+      scrollWheelZoom: false,
+      worldCopyJump: true,
+    }).setView([20, 0], 2);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+
+    const cardsWithLocation = Array.from(
+      document.querySelectorAll('.developer-card[data-location]')
+    ).filter(card => (card.dataset.location || '').trim() !== '');
+
+    const geoCache = {};
+    const markers = [];
+
+    function addMarkerFromCard(card, lat, lon) {
+      const name = card.dataset.name || card.querySelector('.developer-name')?.textContent?.trim() || 'Developer';
+      const location = card.dataset.location;
+      const openToWork = card.dataset.openToWork === 'true';
+
+      const popupHtml = `
+        <strong>${name}</strong><br/>
+        ${location ? `<span>${location}</span><br/>` : ''}
+        ${openToWork ? '<span style="color:#10b981;font-weight:600;">Open to work</span>' : ''}
+      `;
+
+      const marker = L.marker([lat, lon]).addTo(map).bindPopup(popupHtml);
+      markers.push(marker);
+    }
+
+    function fitMapToMarkers() {
+      if (!markers.length) return;
+      const group = L.featureGroup(markers);
+      map.fitBounds(group.getBounds().pad(0.2));
+    }
+
+    function geocodeLocation(location) {
+      const cached = geoCache[location];
+      if (cached) {
+        return Promise.resolve(cached);
+      }
+
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`;
+
+      return fetch(url, {
+        headers: {
+          'Accept-Language': 'en',
+        },
+      })
+        .then(response => response.json())
+        .then(results => {
+          if (!Array.isArray(results) || !results.length) return null;
+          const { lat, lon } = results[0];
+          const point = [parseFloat(lat), parseFloat(lon)];
+          geoCache[location] = point;
+          return point;
+        })
+        .catch(() => null);
+    }
+
+    // Geocode and add markers (simple sequential approach to avoid hammering API)
+    (async () => {
+      for (const card of cardsWithLocation) {
+        const location = (card.dataset.location || '').trim();
+        if (!location) continue;
+
+        const coords = await geocodeLocation(location);
+        if (coords) {
+          addMarkerFromCard(card, coords[0], coords[1]);
+        }
+      }
+
+      fitMapToMarkers();
+    })();
+  }
 });
