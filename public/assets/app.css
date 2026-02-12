@@ -510,6 +510,16 @@ footer a:hover {
     margin-left: 0;
   }
 
+  nav a.nav-logo {
+    font-size: 1.25rem;
+    gap: 0.5rem;
+  }
+
+  nav a.nav-logo .crystal-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
   .filters {
     flex-direction: column;
     align-items: stretch;
