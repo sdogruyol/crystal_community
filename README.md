@@ -59,7 +59,7 @@ Before you begin, ensure you have the following installed:
    createdb crystal_community_development
 
    # Run migrations
-   crystal run src/micrate.cr -- up
+   crystal run src/micrate.cr up
    ```
 
 4. **Configure environment variables**
