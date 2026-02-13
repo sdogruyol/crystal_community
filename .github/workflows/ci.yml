@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: crystal_community_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Crystal
+        uses: crystal-actions/setup-crystal@v1
+        with:
+          crystal-version: '>= 1.19.1'
+
+      - name: Install dependencies
+        run: shards install
+
+      - name: Create test database
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: |
+          psql -c "CREATE DATABASE crystal_community_test;" || true
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crystal_community_test
+          CRYSTAL_COMMUNITY_ENV: test
+        run: crystal run src/micrate.cr -- up
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crystal_community_test
+          GITHUB_CLIENT_ID: test_client_id
+          GITHUB_CLIENT_SECRET: test_client_secret
+          SESSION_SECRET: test-secret-key-for-ci
+          CRYSTAL_COMMUNITY_ENV: test
+          CRYSTAL_COMMUNITY_PORT: 3001
+          GA_TRACKING_ID: ""
+          KEMAL_ENV: test
+        run: crystal spec
