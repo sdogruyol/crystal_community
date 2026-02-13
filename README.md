@@ -5,6 +5,7 @@ A community platform for Crystal developers to connect and discover each other. 
 ![Crystal Community](https://img.shields.io/badge/Crystal-1.19.1+-000000?style=flat-square&logo=crystal&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 ![Kemal](https://img.shields.io/badge/framework-Kemal-000000?style=flat-square)
+![CI](https://github.com/sdogruyol/crystal_community/actions/workflows/ci.yml/badge.svg)
 
 ## ✨ Features
 
