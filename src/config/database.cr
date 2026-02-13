@@ -4,16 +4,6 @@ require "dotenv"
 
 # Database configuration and connection
 module CrystalCommunity::DB
-  if CrystalCommunity::ENVIRONMENT == "production"
-    Dotenv.load ".env.production"
-  elsif CrystalCommunity::ENVIRONMENT == "staging"
-    Dotenv.load ".env.staging"
-  elsif CrystalCommunity::ENVIRONMENT == "test"
-    Dotenv.load ".env.test"
-  else
-    Dotenv.load ".env.development"
-  end
-
   # Get database URL from environment variable or use default
   URL = ENV["DATABASE_URL"]
 

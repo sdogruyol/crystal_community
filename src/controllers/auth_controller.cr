@@ -13,8 +13,8 @@ class CrystalCommunity::AuthController
     client_id = ENV["GITHUB_CLIENT_ID"]? || raise "GITHUB_CLIENT_ID not set"
 
     # Build redirect URI
-    host = env.request.headers["Host"]? || "localhost:3000"
-    scheme = env.request.headers["X-Forwarded-Proto"]? || "http"
+    host = CrystalCommunity::ENVIRONMENT == "production" ? "crystalcommunity.org" : "localhost:3000"
+    scheme = CrystalCommunity::ENVIRONMENT == "production" ? "https" : "http"
     redirect_uri = "#{scheme}://#{host}/users/auth/github/callback"
 
     # Generate state for CSRF protection
@@ -118,8 +118,8 @@ class CrystalCommunity::AuthController
     client_secret = ENV["GITHUB_CLIENT_SECRET"]? || raise "GITHUB_CLIENT_SECRET not set"
 
     # Build redirect URI (must match the one used in github method)
-    host = env.request.headers["Host"]? || "localhost:3000"
-    scheme = env.request.headers["X-Forwarded-Proto"]? || "http"
+    host = CrystalCommunity::ENVIRONMENT == "production" ? "crystalcommunity.org" : "localhost:3000"
+    scheme = CrystalCommunity::ENVIRONMENT == "production" ? "https" : "http"
     redirect_uri = "#{scheme}://#{host}/users/auth/github/callback"
 
     body = URI::Params.encode({
