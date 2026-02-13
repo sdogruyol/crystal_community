@@ -1,3 +1,4 @@
 module CrystalCommunity
   ENVIRONMENT = ENV["CRYSTAL_COMMUNITY_ENV"]? || "development"
+  GA_TRACKING_ID = ENV["CRYSTAL_COMMUNITY_GA_TRACKING_ID"]?
 end

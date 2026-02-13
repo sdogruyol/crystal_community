@@ -74,6 +74,17 @@
 
     <!-- Stylesheet -->
     <link rel="stylesheet" href="/assets/app.css" />
+    
+    <% if ga_tracking_id = CrystalCommunity::GA_TRACKING_ID %>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=<%= ga_tracking_id %>"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '<%= ga_tracking_id %>');
+    </script>
+    <% end %>
   </head>
   <body>
     <header role="banner">
