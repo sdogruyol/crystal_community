@@ -7,7 +7,10 @@ if CrystalCommunity::ENVIRONMENT == "production"
 elsif CrystalCommunity::ENVIRONMENT == "staging"
   Dotenv.load ".env.staging"
 elsif CrystalCommunity::ENVIRONMENT == "test"
-  Dotenv.load ".env.test"
+  # Skip loading .env.test in CI environment (env vars are set directly)
+  unless ENV["CI"]?
+    Dotenv.load ".env.test"
+  end
 else
   Dotenv.load ".env.development"
 end

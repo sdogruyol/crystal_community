@@ -64,4 +64,5 @@ jobs:
           CRYSTAL_COMMUNITY_PORT: 3001
           GA_TRACKING_ID: ""
           KEMAL_ENV: test
+          CI: true
         run: crystal spec

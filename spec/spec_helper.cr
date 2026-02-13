@@ -3,9 +3,8 @@ require "spec-kemal"
 require "spec-kemal/session"
 require "dotenv"
 
-# Load test environment variables from .env.test if it exists
-# In CI, environment variables are set directly, so this file may not exist
-if File.exists?(".env.test")
+# In CI, environment variables are set directly, so skip loading .env.test
+unless ENV["CI"]?
   Dotenv.load ".env.test"
 end
 
