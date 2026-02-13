@@ -149,11 +149,25 @@ crystal-community/
 
 ## 🧪 Testing
 
+### Running Tests
+
+Before running tests, make sure you have a test database set up:
+
+```bash
+# Create test database
+createdb crystal_community_test
+
+# Run migrations on test database
+CRYSTAL_COMMUNITY_ENV=test crystal run src/micrate.cr up
+```
+
 Run the test suite:
 
 ```bash
-crystal spec
+KEMAL_ENV=test CRYSTAL_COMMUNITY_ENV=test crystal spec
 ```
+
+The tests use [spec-kemal](https://github.com/kemalcr/spec-kemal) for E2E testing of Kemal routes and controllers.
 
 ## 🤝 Contributing
 
