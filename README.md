@@ -202,19 +202,19 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 **Create a new migration:**
 
 ```bash
-crystal run src/micrate.cr -- create migration_name
+crystal run src/micrate.cr create migration_name
 ```
 
 **Run migrations:**
 
 ```bash
-crystal run src/micrate.cr -- up
+crystal run src/micrate.cr up
 ```
 
 **Rollback migrations:**
 
 ```bash
-crystal run src/micrate.cr -- down
+crystal run src/micrate.cr down
 ```
 
 ## 🔒 Security
