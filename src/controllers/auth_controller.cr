@@ -67,13 +67,25 @@ class CrystalCommunity::AuthController
       return "Failed to fetch user data"
     end
 
-    # Find or create user
-    github_id = user_data["id"].as_i.to_s
-    github_username = user_data["login"].as_s
-    name = user_data["name"]?.try(&.as_s)
-    bio = user_data["bio"]?.try(&.as_s)
-    location = user_data["location"]?.try(&.as_s)
-    avatar_url = user_data["avatar_url"]?.try(&.as_s)
+    # Safely extract user data from GitHub API response
+    # Handle null values gracefully
+    begin
+      # Required fields - these should always be present
+      github_id = user_data["id"]?.try(&.as_i) || user_data["id"].as_i
+      github_id = github_id.to_s
+
+      github_username = user_data["login"]?.try(&.as_s) || user_data["login"].as_s
+
+      # Optional fields - these can be null in GitHub API
+      # Use safe extraction that handles null values
+      name = extract_github_data_safely(user_data, "name")
+      bio = extract_github_data_safely(user_data, "bio")
+      location = extract_github_data_safely(user_data, "location")
+      avatar_url = extract_github_data_safely(user_data, "avatar_url")
+    rescue ex
+      env.response.status_code = 500
+      return "Failed to parse Github data: #{ex.message}"
+    end
 
     user = CrystalCommunity::DB::User.find_by_github_id(github_id)
 
@@ -143,8 +155,6 @@ class CrystalCommunity::AuthController
     if response.status_code == 200
       json = JSON.parse(response.body)
       json["access_token"]?.try(&.as_s)
-    else
-      nil
     end
   rescue
     nil
@@ -164,9 +174,21 @@ class CrystalCommunity::AuthController
 
     if response.status_code == 200
       JSON.parse(response.body)
-    else
-      nil
     end
+  rescue
+    nil
+  end
+
+  # Safely extract string value from JSON::Any, handling null values
+  private def self.extract_github_data_safely(data : JSON::Any, key : String) : String?
+    value = data[key]?
+    return nil if value.nil?
+
+    # Check if the value is null in JSON by checking raw value
+    return nil if value.raw.nil?
+
+    # Try to extract as string
+    value.as_s
   rescue
     nil
   end
