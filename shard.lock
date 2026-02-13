@@ -44,6 +44,10 @@ shards:
     git: https://github.com/luislavena/radix.git
     version: 0.4.1
 
+  spec-kemal:
+    git: https://github.com/kemalcr/spec-kemal.git
+    version: 1.1.0+git.commit.9e8a54e00b11ca58ac8e70d950978987d5278520
+
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
     version: 0.19.0

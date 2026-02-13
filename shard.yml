@@ -25,6 +25,9 @@ dependencies:
     github: gdotdesign/cr-dotenv
   faker:
     github: askn/faker
+  spec-kemal:
+    github: kemalcr/spec-kemal
+    branch: master
 
 crystal: '>= 1.19.1'
 
