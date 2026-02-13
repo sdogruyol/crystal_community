@@ -28,10 +28,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
       - name: Install Crystal
-        uses: crystal-actions/setup-crystal@v1
-        with:
-          crystal-version: '>= 1.19.1'
+        uses: crystal-lang/install-crystal@v1
 
       - name: Install dependencies
         run: shards install
