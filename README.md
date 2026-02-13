@@ -159,7 +159,7 @@ Before running tests, make sure you have a test database set up:
 createdb crystal_community_test
 
 # Run migrations on test database
-CRYSTAL_COMMUNITY_ENV=test crystal run src/micrate.cr up
+CRYSTAL_COMMUNITY_ENV=test crystal run src/micrate.cr -- up
 ```
 
 Create a `.env.test` file in the project root with the following configuration:
