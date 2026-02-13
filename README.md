@@ -161,6 +161,17 @@ createdb crystal_community_test
 CRYSTAL_COMMUNITY_ENV=test crystal run src/micrate.cr up
 ```
 
+Create a `.env.test` file in the project root with the following configuration:
+
+```bash
+DATABASE_URL="postgres://localhost/crystal_community_test"
+GITHUB_CLIENT_ID="dummy_github_client_id"
+GITHUB_CLIENT_SECRET="dummy_github_client_secret"
+SESSION_SECRET="test-secret-key"
+CRYSTAL_COMMUNITY_PORT=3001
+GA_TRACKING_ID=""
+```
+
 Run the test suite:
 
 ```bash
