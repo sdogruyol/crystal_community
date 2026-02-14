@@ -120,6 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const map = L.map('community-map', {
       scrollWheelZoom: false,
       worldCopyJump: true,
+      maxBounds: L.latLngBounds(L.latLng(-85, -180), L.latLng(85, 180)),
     }).setView([20, 0], 2);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -259,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       const bounds = markerCluster.getBounds();
       if (bounds.isValid()) {
-        map.fitBounds(bounds.pad(0.2), { maxZoom: 10 });
+        map.fitBounds(bounds.pad(0.1), { maxZoom: 10, minZoom: 2 });
       }
     }
 
