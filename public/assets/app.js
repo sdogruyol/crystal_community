@@ -127,6 +127,10 @@ document.addEventListener('DOMContentLoaded', function() {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);
 
+    // Only cluster when markers are almost on the same spot (same/nearby coordinates). 10px = only overlap or very close.
+    const markerCluster = L.markerClusterGroup({ maxClusterRadius: 10 });
+    markerCluster.addTo(map);
+
     const cardsWithLocation = Array.from(
       document.querySelectorAll('.developer-card')
     ).filter(card => {
@@ -239,30 +243,24 @@ document.addEventListener('DOMContentLoaded', function() {
       const customIcon = createAvatarIcon(avatarUrl, username, name);
       
       const marker = L.marker([lat, lon], { icon: customIcon })
-        .addTo(map)
         .bindPopup(popupHtml, {
           maxWidth: 200,
           className: 'custom-popup'
         });
-      
+      markerCluster.addLayer(marker);
       markers.push(marker);
     }
 
     function fitMapToMarkers() {
       if (!markers.length) return;
-      
-      // If only one marker, don't zoom in too much - keep default world view
       if (markers.length === 1) {
-        // Just center on the marker but keep default zoom level
         map.setView(markers[0].getLatLng(), 2);
         return;
       }
-      
-      // For multiple markers, fit bounds but set max zoom to prevent over-zooming
-      const group = L.featureGroup(markers);
-      map.fitBounds(group.getBounds().pad(0.2), {
-        maxZoom: 10  // Prevent zooming in too much even with multiple markers
-      });
+      const bounds = markerCluster.getBounds();
+      if (bounds.isValid()) {
+        map.fitBounds(bounds.pad(0.2), { maxZoom: 10 });
+      }
     }
 
     function geocodeLocation(location) {
