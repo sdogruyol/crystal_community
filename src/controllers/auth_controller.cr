@@ -90,6 +90,15 @@ class CrystalCommunity::AuthController
     user = CrystalCommunity::DB::User.find_by_github_id(github_id)
 
     if user.nil?
+      # Geocode location once at signup and store coordinates
+      lat = nil
+      lon = nil
+      if location && !location.strip.empty?
+        coords = CrystalCommunity::GeocodeService.lookup(location)
+        lat = coords[0]? if coords
+        lon = coords[1]? if coords
+      end
+
       # Create new user
       user = CrystalCommunity::DB::User.create(
         github_id: github_id,
@@ -97,6 +106,8 @@ class CrystalCommunity::AuthController
         name: name,
         bio: bio,
         location: location,
+        latitude: lat,
+        longitude: lon,
         avatar_url: avatar_url,
         open_to_work: false,
         role: "developer",
@@ -116,6 +127,18 @@ class CrystalCommunity::AuthController
         avatar_url
       )
       user = updated_user if updated_user
+
+      # Update coordinates: geocode if location present, else clear
+      user_id = user.not_nil!.id.not_nil!
+      if location && !location.strip.empty?
+        coords = CrystalCommunity::GeocodeService.lookup(location)
+        if coords
+          CrystalCommunity::DB::User.update_coordinates(user_id, coords[0], coords[1])
+        end
+      else
+        CrystalCommunity::DB::User.update_coordinates(user_id, nil, nil)
+      end
+      user = CrystalCommunity::DB::User.find(user_id) || user
     end
 
     # Set user session

@@ -33,6 +33,7 @@
             data-projects="<%= dev.projects_count %>"
             data-name="<%= dev.name || dev.github_username %>"
             data-location="<%= dev.location || "" %>"
+            <% if dev.latitude && dev.longitude %>data-latitude="<%= dev.latitude %>" data-longitude="<%= dev.longitude %>" <% end %>
             data-open-to-work="<%= dev.open_to_work %>"
             data-avatar="<%= dev.avatar_url || "" %>"
             data-username="<%= dev.github_username %>">

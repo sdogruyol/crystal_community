@@ -128,8 +128,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }).addTo(map);
 
     const cardsWithLocation = Array.from(
-      document.querySelectorAll('.developer-card[data-location]')
-    ).filter(card => (card.dataset.location || '').trim() !== '');
+      document.querySelectorAll('.developer-card')
+    ).filter(card => {
+      const hasCoords = card.dataset.latitude != null && card.dataset.longitude != null &&
+        card.dataset.latitude !== '' && card.dataset.longitude !== '';
+      const hasLocation = (card.dataset.location || '').trim() !== '';
+      return hasCoords || hasLocation;
+    });
 
     const geoCache = {};
     const markers = [];
@@ -282,9 +287,16 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(() => null);
     }
 
-    // Geocode and add markers (simple sequential approach to avoid hammering API)
+    // Add markers: use stored coordinates when present, else fallback to geocode API
     (async () => {
       for (const card of cardsWithLocation) {
+        const lat = card.dataset.latitude;
+        const lon = card.dataset.longitude;
+        if (lat != null && lon != null && lat !== '' && lon !== '') {
+          addMarkerFromCard(card, parseFloat(lat), parseFloat(lon));
+          continue;
+        }
+
         const location = (card.dataset.location || '').trim();
         if (!location) continue;
 
