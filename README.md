@@ -126,6 +126,18 @@ curl -fsSLo- https://raw.githubusercontent.com/samueleaton/sentry/master/install
 
 The `.sentry.yml` file is configured to build `src/app.cr` and run the `./crystal-community` binary, watching `src/**/*.cr` and `src/**/*.ecr` files.
 
+### Fake User Generator (Development)
+
+Create fake users in the development environment to test the map and developer directory:
+
+```bash
+CRYSTAL_COMMUNITY_ENV=development crystal run src/seeders/fake_user_generator.cr
+```
+
+This command creates 100 fake users by default. Users are inserted with random names, bios, locations, avatar URLs, and other profile data.
+
+> **Note:** Ensure database migrations have been run and `.env.development` is configured before running this command.
+
 ## 📁 Project Structure
 
 ```
