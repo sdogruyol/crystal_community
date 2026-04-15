@@ -13,8 +13,10 @@ targets:
 dependencies:
   kemal:
     github: kemalcr/kemal
+    version: '>= 1.11.0'
   kemal-session:
     github: kemalcr/kemal-session
+    version: '>= 1.5.0'
   micrate:
     github: amberframework/micrate
   db:

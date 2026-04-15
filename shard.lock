@@ -22,11 +22,11 @@ shards:
 
   kemal:
     git: https://github.com/kemalcr/kemal.git
-    version: 1.9.0
+    version: 1.11.0
 
   kemal-session:
     git: https://github.com/kemalcr/kemal-session.git
-    version: 1.4.0
+    version: 1.5.0
 
   micrate:
     git: https://github.com/amberframework/micrate.git
@@ -46,7 +46,7 @@ shards:
 
   spec-kemal:
     git: https://github.com/kemalcr/spec-kemal.git
-    version: 1.1.0+git.commit.9e8a54e00b11ca58ac8e70d950978987d5278520
+    version: 1.2.0+git.commit.8efb97e2e547c9663f8f681d5aa5f990717f22f2
 
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
