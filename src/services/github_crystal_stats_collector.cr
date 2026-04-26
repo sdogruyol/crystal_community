@@ -10,37 +10,42 @@ module CrystalCommunity
   #
   # - Excludes forks via repo search query `fork:false`.
   # - Repo discovery subdivides Search by `stars` (then `pushed` if needed) to approach full universe past the 1000-results/query cap.
-  # - Excludes bots by login suffix `"[bot]"`.
-  # - For commits: counts only those with `committer.login` present.
-  # - No file or DB cache: every run loads the repo list from Search. `/commits` is called only for repos
-  #   whose Search `created_at` is within the last year (`COMMITTER_FETCH_MAX_REPO_AGE`); older repos are skipped for committers.
-  # - Commit listing uses the same rolling window: `commits?since=` is `Time.utc - COMMITTER_FETCH_MAX_REPO_AGE` (no CLI flag).
+  # - Excludes bots by login suffix `"[bot]"` for unique-owner counts only.
+  # - Rolling 30-day window (UTC) from collection time for pushed/created repo counts.
+  # - Star totals and buckets, owner User vs Organization, and top topics come from Search `items` (no per-repo GETs).
+  # - No file or DB cache: every run loads the repo list from Search.
   class GitHubCrystalStatsCollector
     class Error < Exception
     end
 
-    # Only repos with `created_at` not older than this span (from now, UTC) get a `/commits` crawl.
-    COMMITTER_FETCH_MAX_REPO_AGE = 1.year
+    STATS_ROLLING_WINDOW = 30.days
 
     private struct CrystalRepoHit
       getter full_name : String
       getter owner_login : String
+      getter owner_type : String
       getter created_at : Time
+      getter pushed_at : Time
+      getter stargazers_count : Int32
+      getter topics : Array(String)
 
-      def initialize(@full_name : String, @owner_login : String, @created_at : Time)
+      def initialize(
+        @full_name : String,
+        @owner_login : String,
+        @owner_type : String,
+        @created_at : Time,
+        @pushed_at : Time,
+        @stargazers_count : Int32,
+        @topics : Array(String)
+      )
       end
     end
 
     struct Options
       getter token : String
       getter max_repo_pages : Int32?
-      getter max_commit_pages_per_repo : Int32?
 
-      def initialize(
-        @token : String,
-        @max_repo_pages : Int32?,
-        @max_commit_pages_per_repo : Int32?
-      )
+      def initialize(@token : String, @max_repo_pages : Int32?)
       end
 
       def self.from_argv(argv : Array(String)) : self
@@ -50,7 +55,6 @@ module CrystalCommunity
         end
 
         max_repo_pages = nil
-        max_commit_pages = nil
 
         args = argv.dup
         if args.first? == "--"
@@ -63,25 +67,47 @@ module CrystalCommunity
           when "--max-repo-pages"
             max_repo_pages = args[i + 1]?.try(&.to_i)
             i += 2
-          when "--max-commit-pages"
-            max_commit_pages = args[i + 1]?.try(&.to_i)
-            i += 2
           else
             raise Error.new("Unknown arg: #{args[i]}")
           end
         end
 
-        new(token, max_repo_pages, max_commit_pages)
+        new(token, max_repo_pages)
       end
     end
 
     struct Result
-      getter since : Time
+      getter window_start : Time
       getter repos_scanned : Int32
       getter unique_owners : Int32
-      getter unique_committers : Int32
+      getter repos_pushed_last_30d : Int32
+      getter repos_created_last_30d : Int32
+      getter total_stars : Int64
+      getter stars_bucket_0 : Int32
+      getter stars_bucket_1_10 : Int32
+      getter stars_bucket_11_100 : Int32
+      getter stars_bucket_101_1000 : Int32
+      getter stars_bucket_1001_plus : Int32
+      getter repos_owner_user : Int32
+      getter repos_owner_org : Int32
+      getter top_topics_json : String
 
-      def initialize(@since : Time, @repos_scanned : Int32, @unique_owners : Int32, @unique_committers : Int32)
+      def initialize(
+        @window_start : Time,
+        @repos_scanned : Int32,
+        @unique_owners : Int32,
+        @repos_pushed_last_30d : Int32,
+        @repos_created_last_30d : Int32,
+        @total_stars : Int64,
+        @stars_bucket_0 : Int32,
+        @stars_bucket_1_10 : Int32,
+        @stars_bucket_11_100 : Int32,
+        @stars_bucket_101_1000 : Int32,
+        @stars_bucket_1001_plus : Int32,
+        @repos_owner_user : Int32,
+        @repos_owner_org : Int32,
+        @top_topics_json : String
+      )
       end
     end
 
@@ -90,10 +116,10 @@ module CrystalCommunity
     USER_AGENT        = "crystal-community-github-crystal-stats"
     MAX_SEARCH_PAGES  = 10
     MAX_RATE_LIMIT_WAITS = 32
-    # GitHub Search returns at most 1000 results per query; we subdivide by stars (then pushed) to widen coverage.
     BASE_REPO_SEARCH       = "language:Crystal fork:false"
     STARS_TAIL_STEP        = 1_000_000_i64
     PUSHED_PARTITION_START = Time.utc(2008, 1, 1)
+    TOP_TOPICS_LIMIT       = 40
 
     @request_log_io : IO? = nil
     @catalog_search_probe_count : Int32 = 0
@@ -114,42 +140,82 @@ module CrystalCommunity
 
     private def collect_body(io : IO, log_io : IO) : Result
       repos = fetch_crystal_repos(@options.token, @options.max_repo_pages, log_io)
-      commit_since = Time.utc - COMMITTER_FETCH_MAX_REPO_AGE
+      window_start = Time.utc - STATS_ROLLING_WINDOW
 
       owner_logins = Set(String).new
+      repos_pushed_last_30d = 0
+      repos_created_last_30d = 0
+      total_stars = 0_i64
+      stars_bucket_0 = 0
+      stars_bucket_1_10 = 0
+      stars_bucket_11_100 = 0
+      stars_bucket_101_1000 = 0
+      stars_bucket_1001_plus = 0
+      repos_owner_user = 0
+      repos_owner_org = 0
+      topic_counts = Hash(String, Int32).new(default_value: 0)
+
       repos.each do |hit|
-        next if bot_login?(hit.owner_login)
-        owner_logins.add(hit.owner_login)
+        unless bot_login?(hit.owner_login)
+          owner_logins.add(hit.owner_login)
+        end
+
+        repos_pushed_last_30d += 1 if hit.pushed_at >= window_start
+        repos_created_last_30d += 1 if hit.created_at >= window_start
+        total_stars += hit.stargazers_count.to_i64
+
+        case hit.stargazers_count
+        when 0
+          stars_bucket_0 += 1
+        when 1..10
+          stars_bucket_1_10 += 1
+        when 11..100
+          stars_bucket_11_100 += 1
+        when 101..1000
+          stars_bucket_101_1000 += 1
+        else
+          stars_bucket_1001_plus += 1
+        end
+
+        if hit.owner_type == "Organization"
+          repos_owner_org += 1
+        else
+          repos_owner_user += 1
+        end
+
+        hit.topics.each do |t|
+          topic_counts[t] += 1
+        end
       end
 
-      unique_committers = Set(String).new
-      young = repos.select { |h| h.created_at >= commit_since }
-      skipped_old = repos.size - young.size
-      young.each_with_index do |hit, i|
-        log_io.puts "[#{i + 1}/#{young.size}] #{hit.full_name} (created #{hit.created_at.to_utc.to_s("%Y-%m-%d")}) — fetching committers since #{commit_since.to_utc.to_s("%Y-%m-%dT%H:%M:%SZ")}..."
-        committers = fetch_committers_for_repo(
-          @options.token,
-          hit.full_name,
-          commit_since,
-          @options.max_commit_pages_per_repo
-        )
-        committers.each { |l| unique_committers.add(l) }
-      end
+      top_pairs = topic_counts.to_a.sort_by! { |(_, c)| -c }.first(TOP_TOPICS_LIMIT)
+      top_topics_json = top_pairs.map { |topic, count| {"topic" => topic, "count" => count} }.to_json
 
-      if skipped_old > 0
-        log_io.puts "Committer fetch: skipped #{skipped_old} repos (created_at before #{commit_since.to_utc.to_s("%Y-%m-%d")}, older than #{COMMITTER_FETCH_MAX_REPO_AGE.inspect})"
-      end
-
-      io.puts "Commit window (API since=, same as repo age cutoff): #{commit_since.to_s("%Y-%m-%d")} UTC"
+      io.puts "30-day window start (UTC): #{window_start.to_s("%Y-%m-%d")}"
       io.puts "Crystal repos scanned (fork:false): #{repos.size}"
-      io.puts "Unique owners with Crystal repo (org+user, bots excluded): #{owner_logins.size}"
-      io.puts "Unique committers (committer.login, bots excluded; repos ≤#{COMMITTER_FETCH_MAX_REPO_AGE.inspect} old by Search created_at): #{unique_committers.size}"
+      io.puts "Unique owners with Crystal repo (bots excluded from this count): #{owner_logins.size}"
+      io.puts "Repos pushed in last 30d: #{repos_pushed_last_30d}"
+      io.puts "Repos created in last 30d: #{repos_created_last_30d}"
+      io.puts "Total stars (sum of stargazers_count): #{total_stars}"
+      io.puts "Star buckets 0 / 1–10 / 11–100 / 101–1000 / 1001+: #{stars_bucket_0} / #{stars_bucket_1_10} / #{stars_bucket_11_100} / #{stars_bucket_101_1000} / #{stars_bucket_1001_plus}"
+      io.puts "Repos by owner type — User: #{repos_owner_user}, Organization: #{repos_owner_org}"
+      io.puts "Top #{top_pairs.size} topics stored (#{topic_counts.size} distinct)."
 
       Result.new(
-        since: commit_since,
+        window_start: window_start,
         repos_scanned: repos.size,
         unique_owners: owner_logins.size,
-        unique_committers: unique_committers.size
+        repos_pushed_last_30d: repos_pushed_last_30d,
+        repos_created_last_30d: repos_created_last_30d,
+        total_stars: total_stars,
+        stars_bucket_0: stars_bucket_0,
+        stars_bucket_1_10: stars_bucket_1_10,
+        stars_bucket_11_100: stars_bucket_11_100,
+        stars_bucket_101_1000: stars_bucket_101_1000,
+        stars_bucket_1001_plus: stars_bucket_1001_plus,
+        repos_owner_user: repos_owner_user,
+        repos_owner_org: repos_owner_org,
+        top_topics_json: top_topics_json
       )
     end
 
@@ -225,7 +291,20 @@ module CrystalCommunity
       end
     end
 
-    # Search public repos: language:Crystal fork:false. Always hits the Search API (no catalog cache).
+    private def repo_hit_from_search_item(item : JSON::Any) : CrystalRepoHit
+      topics = item["topics"]?.try(&.as_a).try(&.map(&.as_s)) || [] of String
+      stars = item["stargazers_count"]?.try(&.as_i) || 0
+      CrystalRepoHit.new(
+        full_name: item["full_name"].as_s,
+        owner_login: item["owner"]["login"].as_s,
+        owner_type: item["owner"]["type"].as_s,
+        created_at: Time.parse_iso8601(item["created_at"].as_s).to_utc,
+        pushed_at: Time.parse_iso8601(item["pushed_at"].as_s).to_utc,
+        stargazers_count: stars,
+        topics: topics,
+      )
+    end
+
     private def fetch_crystal_repos(token : String, max_pages : Int32?, log_io : IO) : Array(CrystalRepoHit)
       fetch_crystal_repos_from_api(token, max_pages, log_io)
     end
@@ -261,10 +340,8 @@ module CrystalCommunity
         items = json["items"].as_a
         break if items.empty?
         items.each do |item|
-          full_name = item["full_name"].as_s
-          owner_login = item["owner"]["login"].as_s
-          created_at = Time.parse_iso8601(item["created_at"].as_s).to_utc
-          acc[full_name] = CrystalRepoHit.new(full_name, owner_login, created_at)
+          hit = repo_hit_from_search_item(item)
+          acc[hit.full_name] = hit
         end
         tag = label || q_raw
         log_io.puts "  #{tag} — page #{page}: +#{items.size} (catalog now #{acc.size} unique)"
@@ -357,10 +434,8 @@ module CrystalCommunity
         items = json["items"].as_a
         break if items.empty?
         items.each do |item|
-          full_name = item["full_name"].as_s
-          owner_login = item["owner"]["login"].as_s
-          created_at = Time.parse_iso8601(item["created_at"].as_s).to_utc
-          by_name[full_name] = CrystalRepoHit.new(full_name, owner_login, created_at)
+          hit = repo_hit_from_search_item(item)
+          by_name[hit.full_name] = hit
         end
         total_count = json["total_count"]?.try(&.as_i) || 0
         log_io.puts "Repos page #{page}: fetched #{items.size} (total_count=#{total_count})"
@@ -381,35 +456,6 @@ module CrystalCommunity
       total = @catalog_search_probe_count + @catalog_search_page_fetches
       log_io.puts "Repo catalog Search API summary: #{total} GET /search/repositories (#{@catalog_search_probe_count} total_count probes, #{@catalog_search_page_fetches} result pages)"
       result
-    end
-
-    private def fetch_committers_for_repo(token : String, full_name : String, since : Time, max_pages : Int32?) : Set(String)
-      owner, repo = full_name.split("/", 2)
-      committers = Set(String).new
-      page = 1
-      since_iso = since.to_s("%Y-%m-%dT%H:%M:%SZ")
-
-      loop do
-        break if max_pages && page > max_pages
-
-        path = "/repos/#{owner}/#{repo}/commits?since=#{URI.encode_www_form(since_iso)}&per_page=#{DEFAULT_PER_PAGE}&page=#{page}"
-        json = github_get_json(path, token)
-        arr = json.as_a
-        break if arr.empty?
-
-        arr.each do |c|
-          committer = c["committer"]?
-          next unless committer && committer.raw != nil
-          login = committer["login"]?.try(&.as_s)
-          next unless login
-          next if bot_login?(login)
-          committers.add(login)
-        end
-
-        page += 1
-      end
-
-      committers
     end
   end
 end
