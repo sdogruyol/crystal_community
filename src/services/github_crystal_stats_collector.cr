@@ -77,7 +77,15 @@ module CrystalCommunity
 
         since =
           if s = since_str
-            Time.parse_utc("#{s}T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ")
+            if s.matches?(/^\d{4}-\d{2}-\d{2}$/)
+              Time.parse_utc("#{s}T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ")
+            elsif s.matches?(/^\d+$/)
+              days = s.to_i
+              raise Error.new("--since: day count must be >= 1 (got #{days})") if days < 1
+              Time.utc - days.days
+            else
+              raise Error.new("Invalid --since #{s.inspect}: use YYYY-MM-DD or a day count (e.g. 3650)")
+            end
           else
             Time.utc - 365.days
           end

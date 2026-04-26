@@ -1,6 +1,7 @@
 # Hourly (or on-demand) GitHub stats for public Crystal repos. Persists one row per run to table `github_stats`.
 #
 # Without --since, the commit window defaults to 365 days ago at 00:00 UTC (same as GitHubCrystalStatsCollector::Options.from_argv).
+# --since YYYY-MM-DD = UTC midnight that day; --since N (digits only) = N days ago from now UTC.
 #
 # Full repo catalog uses partitioned GitHub Search (stars, then pushed if a star bucket still has >1000 hits),
 # because each search query returns at most 1000 items. Optional: GITHUB_CRYSTAL_STARS_PARTITION_MAX (default 2_000_000).
@@ -20,6 +21,7 @@
 #   GITHUB_TOKEN=ghp_xxx crystal run src/scripts/github_crystal_stats.cr -- --refresh-repos
 #   GITHUB_TOKEN=ghp_xxx crystal run src/scripts/github_crystal_stats.cr -- --refresh-commits
 #   GITHUB_TOKEN=ghp_xxx crystal run src/scripts/github_crystal_stats.cr -- --since 2025-04-26
+#   GITHUB_TOKEN=ghp_xxx crystal run src/scripts/github_crystal_stats.cr -- --since 3650
 #
 # Or build once:
 #   shards build github-crystal-stats
