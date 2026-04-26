@@ -2,8 +2,20 @@
 #
 # Without --since, the commit window defaults to 365 days ago at 00:00 UTC (same as GitHubCrystalStatsCollector::Options.from_argv).
 #
+# Repo list (`language:Crystal fork:false`) is cached under data/github_crystal_repos_cache.json for
+# GITHUB_CRYSTAL_REPOS_CACHE_TTL_HOURS (default 24) to avoid GitHub Search API pagination on every run.
+# Override path with GITHUB_CRYSTAL_REPOS_CACHE_PATH. Force a fresh catalog with --refresh-repos.
+# (--max-repo-pages disables cache read/write so tests do not poison the file.)
+#
+# Per-repo committer sets (/repos/.../commits) are cached in data/github_crystal_commits_cache.json, keyed by
+# the exact commit --since instant, with GITHUB_CRYSTAL_COMMITS_CACHE_TTL_HOURS (default 24).
+# GITHUB_CRYSTAL_COMMITS_CACHE_PATH overrides the file path. Use --refresh-commits to refetch every repo this run.
+# (--max-commit-pages disables this cache, same as repo list.)
+#
 # Usage:
 #   GITHUB_TOKEN=ghp_xxx crystal run src/scripts/github_crystal_stats.cr
+#   GITHUB_TOKEN=ghp_xxx crystal run src/scripts/github_crystal_stats.cr -- --refresh-repos
+#   GITHUB_TOKEN=ghp_xxx crystal run src/scripts/github_crystal_stats.cr -- --refresh-commits
 #   GITHUB_TOKEN=ghp_xxx crystal run src/scripts/github_crystal_stats.cr -- --since 2025-04-26
 #
 # Or build once:
