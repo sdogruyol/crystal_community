@@ -20,8 +20,8 @@ class CrystalCommunity::StatsController
   end
 
   def self.index(env)
-    page_title = "Crystal Stats — ecosystem stats"
-    page_description = "Crystal Stats: open source projects on GitHub, stars, fresh activity, new repos, and trending topics—updated as we scan public data."
+    page_title = "Crystal Community: Crystal Ecosystem Stats"
+    page_description = "Crystal Community — open source on GitHub, stars, recent activity, new repos, and top topics in the Crystal ecosystem. Updated as we scan public data."
     request_url = "/stats"
     canonical_url : String? = nil
     og_url : String? = nil
