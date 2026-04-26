@@ -1,27 +1,16 @@
 # Hourly (or on-demand) GitHub stats for public Crystal repos. Persists one row per run to table `github_stats`.
 #
-# Without --since, the commit window defaults to 365 days ago at 00:00 UTC (same as GitHubCrystalStatsCollector::Options.from_argv).
-# --since YYYY-MM-DD = UTC midnight that day; --since N (digits only) = N days ago from now UTC.
-#
 # Full repo catalog uses partitioned GitHub Search (stars, then pushed if a star bucket still has >1000 hits),
 # because each search query returns at most 1000 items. Optional: GITHUB_CRYSTAL_STARS_PARTITION_MAX (default 2_000_000).
+# Every run fetches the catalog from the API (no repo list cache).
 #
-# Repo list (`language:Crystal fork:false`) is cached under data/github_crystal_repos_cache.json for
-# GITHUB_CRYSTAL_REPOS_CACHE_TTL_HOURS (default 24) to avoid GitHub Search API pagination on every run.
-# Override path with GITHUB_CRYSTAL_REPOS_CACHE_PATH. Force a fresh catalog with --refresh-repos.
-# (--max-repo-pages disables cache read/write so tests do not poison the file.)
-#
-# Per-repo committer sets (/repos/.../commits) are cached in data/github_crystal_commits_cache.json, keyed by
-# the exact commit --since instant, with GITHUB_CRYSTAL_COMMITS_CACHE_TTL_HOURS (default 24).
-# GITHUB_CRYSTAL_COMMITS_CACHE_PATH overrides the file path. Use --refresh-commits to refetch every repo this run.
-# (--max-commit-pages disables this cache, same as repo list.)
+# Committer counts: GET /repos/{owner}/{repo}/commits?since=… uses a rolling window of
+# `GitHubCrystalStatsCollector::COMMITTER_FETCH_MAX_REPO_AGE` (1 year) from collection time (UTC).
+# Only repos whose Search `created_at` falls in that same window are scanned for committers; older repos are skipped.
 #
 # Usage:
 #   GITHUB_TOKEN=ghp_xxx crystal run src/scripts/github_crystal_stats.cr
-#   GITHUB_TOKEN=ghp_xxx crystal run src/scripts/github_crystal_stats.cr -- --refresh-repos
-#   GITHUB_TOKEN=ghp_xxx crystal run src/scripts/github_crystal_stats.cr -- --refresh-commits
-#   GITHUB_TOKEN=ghp_xxx crystal run src/scripts/github_crystal_stats.cr -- --since 2025-04-26
-#   GITHUB_TOKEN=ghp_xxx crystal run src/scripts/github_crystal_stats.cr -- --since 3650
+#   GITHUB_TOKEN=ghp_xxx crystal run src/scripts/github_crystal_stats.cr -- --max-repo-pages 2 --max-commit-pages 1
 #
 # Or build once:
 #   shards build github-crystal-stats
@@ -51,7 +40,9 @@ require "../services/github_crystal_stats_collector"
 
 begin
   options = CrystalCommunity::GitHubCrystalStatsCollector::Options.from_argv(ARGV)
-  STDERR.puts "Commit window since #{options.since.to_utc.to_s("%Y-%m-%dT%H:%M:%SZ")} (omit --since for 365-day default)"
+  span = CrystalCommunity::GitHubCrystalStatsCollector::COMMITTER_FETCH_MAX_REPO_AGE
+  since = Time.utc - span
+  STDERR.puts "Commit/repo window start #{since.to_utc.to_s("%Y-%m-%dT%H:%M:%SZ")} (#{span.inspect} rolling, UTC)"
   result = CrystalCommunity::GitHubCrystalStatsCollector.new(options).collect
   row = CrystalCommunity::DB::GithubStat.insert!(
     since: result.since,

@@ -12,26 +12,34 @@ module CrystalCommunity
   # - Repo discovery subdivides Search by `stars` (then `pushed` if needed) to approach full universe past the 1000-results/query cap.
   # - Excludes bots by login suffix `"[bot]"`.
   # - For commits: counts only those with `committer.login` present.
-  # - Repo catalog and per-repo committer sets can be file-cached (TTL); see collect() and Options.
+  # - No file or DB cache: every run loads the repo list from Search. `/commits` is called only for repos
+  #   whose Search `created_at` is within the last year (`COMMITTER_FETCH_MAX_REPO_AGE`); older repos are skipped for committers.
+  # - Commit listing uses the same rolling window: `commits?since=` is `Time.utc - COMMITTER_FETCH_MAX_REPO_AGE` (no CLI flag).
   class GitHubCrystalStatsCollector
     class Error < Exception
     end
 
+    # Only repos with `created_at` not older than this span (from now, UTC) get a `/commits` crawl.
+    COMMITTER_FETCH_MAX_REPO_AGE = 1.year
+
+    private struct CrystalRepoHit
+      getter full_name : String
+      getter owner_login : String
+      getter created_at : Time
+
+      def initialize(@full_name : String, @owner_login : String, @created_at : Time)
+      end
+    end
+
     struct Options
       getter token : String
-      getter since : Time
       getter max_repo_pages : Int32?
       getter max_commit_pages_per_repo : Int32?
-      getter refresh_repo_catalog : Bool
-      getter refresh_commits_cache : Bool
 
       def initialize(
         @token : String,
-        @since : Time,
         @max_repo_pages : Int32?,
-        @max_commit_pages_per_repo : Int32?,
-        @refresh_repo_catalog : Bool = false,
-        @refresh_commits_cache : Bool = false
+        @max_commit_pages_per_repo : Int32?
       )
       end
 
@@ -41,11 +49,8 @@ module CrystalCommunity
           raise Error.new("Set GITHUB_TOKEN environment variable.")
         end
 
-        since_str = nil
         max_repo_pages = nil
         max_commit_pages = nil
-        refresh_repo_catalog = false
-        refresh_commits_cache = false
 
         args = argv.dup
         if args.first? == "--"
@@ -55,42 +60,18 @@ module CrystalCommunity
         i = 0
         while i < args.size
           case args[i]
-          when "--since"
-            since_str = args[i + 1]?
-            i += 2
           when "--max-repo-pages"
             max_repo_pages = args[i + 1]?.try(&.to_i)
             i += 2
           when "--max-commit-pages"
             max_commit_pages = args[i + 1]?.try(&.to_i)
             i += 2
-          when "--refresh-repos"
-            refresh_repo_catalog = true
-            i += 1
-          when "--refresh-commits"
-            refresh_commits_cache = true
-            i += 1
           else
             raise Error.new("Unknown arg: #{args[i]}")
           end
         end
 
-        since =
-          if s = since_str
-            if s.matches?(/^\d{4}-\d{2}-\d{2}$/)
-              Time.parse_utc("#{s}T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ")
-            elsif s.matches?(/^\d+$/)
-              days = s.to_i
-              raise Error.new("--since: day count must be >= 1 (got #{days})") if days < 1
-              Time.utc - days.days
-            else
-              raise Error.new("Invalid --since #{s.inspect}: use YYYY-MM-DD or a day count (e.g. 3650)")
-            end
-          else
-            Time.utc - 365.days
-          end
-
-        new(token, since, max_repo_pages, max_commit_pages, refresh_repo_catalog, refresh_commits_cache)
+        new(token, max_repo_pages, max_commit_pages)
       end
     end
 
@@ -132,84 +113,40 @@ module CrystalCommunity
     end
 
     private def collect_body(io : IO, log_io : IO) : Result
-      repos = fetch_crystal_repos(@options.token, @options.max_repo_pages, @options.refresh_repo_catalog, log_io)
+      repos = fetch_crystal_repos(@options.token, @options.max_repo_pages, log_io)
+      commit_since = Time.utc - COMMITTER_FETCH_MAX_REPO_AGE
 
       owner_logins = Set(String).new
-      repos.each do |(_full_name, owner_login)|
-        next if bot_login?(owner_login)
-        owner_logins.add(owner_login)
+      repos.each do |hit|
+        next if bot_login?(hit.owner_login)
+        owner_logins.add(hit.owner_login)
       end
 
       unique_committers = Set(String).new
-      use_commits_cache = commits_cache_enabled?
-      since_key = commits_since_cache_key
-      commits_cache : Hash(String, CommitsRepoCacheEntry)? = nil
-      if use_commits_cache
-        commits_cache = if @options.refresh_commits_cache
-          log_io.puts "Committers cache: --refresh-commits, rebuilding all repo entries from API"
-          Hash(String, CommitsRepoCacheEntry).new
-        else
-          load_commits_cache_window(since_key, log_io)
-        end
-      end
-      commits_cache_dirty = false
-
-      repos.each_with_index do |(full_name, _owner), idx|
-        committers = if use_commits_cache
-          cc = commits_cache.not_nil!
-          if !@options.refresh_commits_cache && (ent = cc[full_name]?)
-            age = Time.utc - ent[:fetched_at]
-            if age <= commits_cache_ttl
-              log_io.puts "[#{idx + 1}/#{repos.size}] #{full_name} (committers cache hit, age #{age.inspect})"
-              ent[:logins]
-            else
-              log_io.puts "[#{idx + 1}/#{repos.size}] Fetching committers for #{full_name} since #{@options.since}..."
-              fresh = fetch_committers_for_repo(
-                @options.token,
-                full_name,
-                @options.since,
-                @options.max_commit_pages_per_repo
-              )
-              cc[full_name] = {fetched_at: Time.utc, logins: fresh}
-              commits_cache_dirty = true
-              fresh
-            end
-          else
-            log_io.puts "[#{idx + 1}/#{repos.size}] Fetching committers for #{full_name} since #{@options.since}..."
-            fresh = fetch_committers_for_repo(
-              @options.token,
-              full_name,
-              @options.since,
-              @options.max_commit_pages_per_repo
-            )
-            cc[full_name] = {fetched_at: Time.utc, logins: fresh}
-            commits_cache_dirty = true
-            fresh
-          end
-        else
-          log_io.puts "[#{idx + 1}/#{repos.size}] Fetching committers for #{full_name} since #{@options.since}..."
-          fetch_committers_for_repo(
-            @options.token,
-            full_name,
-            @options.since,
-            @options.max_commit_pages_per_repo
-          )
-        end
-
+      young = repos.select { |h| h.created_at >= commit_since }
+      skipped_old = repos.size - young.size
+      young.each_with_index do |hit, i|
+        log_io.puts "[#{i + 1}/#{young.size}] #{hit.full_name} (created #{hit.created_at.to_utc.to_s("%Y-%m-%d")}) — fetching committers since #{commit_since.to_utc.to_s("%Y-%m-%dT%H:%M:%SZ")}..."
+        committers = fetch_committers_for_repo(
+          @options.token,
+          hit.full_name,
+          commit_since,
+          @options.max_commit_pages_per_repo
+        )
         committers.each { |l| unique_committers.add(l) }
       end
 
-      if use_commits_cache && commits_cache_dirty
-        write_commits_cache_window(since_key, commits_cache.not_nil!, log_io)
+      if skipped_old > 0
+        log_io.puts "Committer fetch: skipped #{skipped_old} repos (created_at before #{commit_since.to_utc.to_s("%Y-%m-%d")}, older than #{COMMITTER_FETCH_MAX_REPO_AGE.inspect})"
       end
 
-      io.puts "Since (committer-date via since filter): #{@options.since.to_s("%Y-%m-%d")}"
+      io.puts "Commit window (API since=, same as repo age cutoff): #{commit_since.to_s("%Y-%m-%d")} UTC"
       io.puts "Crystal repos scanned (fork:false): #{repos.size}"
       io.puts "Unique owners with Crystal repo (org+user, bots excluded): #{owner_logins.size}"
-      io.puts "Unique committers in Crystal repos since #{@options.since.to_s("%Y-%m-%d")} (committer.login only, bots excluded): #{unique_committers.size}"
+      io.puts "Unique committers (committer.login, bots excluded; repos ≤#{COMMITTER_FETCH_MAX_REPO_AGE.inspect} old by Search created_at): #{unique_committers.size}"
 
       Result.new(
-        since: @options.since,
+        since: commit_since,
         repos_scanned: repos.size,
         unique_owners: owner_logins.size,
         unique_committers: unique_committers.size
@@ -276,7 +213,7 @@ module CrystalCommunity
         if rate_limit_response?(resp)
           rate_waits += 1
           if rate_waits > MAX_RATE_LIMIT_WAITS
-            raise Error.new("GitHub rate limit: gave up after #{MAX_RATE_LIMIT_WAITS} waits. Increase GITHUB_API_REQUEST_DELAY_MS, shorten --since, or run again later (commit cache will resume).")
+            raise Error.new("GitHub rate limit: gave up after #{MAX_RATE_LIMIT_WAITS} waits. Increase GITHUB_API_REQUEST_DELAY_MS, or run again later.")
           end
           sleep_for_github_rate_limit(resp, log_io)
           next
@@ -288,144 +225,9 @@ module CrystalCommunity
       end
     end
 
-    # Search public repos: language:Crystal fork:false.
-    # Uses a JSON file cache (TTL) so hourly cron does not re-hit the Search API every run.
-    # Cache is skipped when +max_pages+ is set, or when +force_refresh+ is true, or via --refresh-repos.
-    private def fetch_crystal_repos(token : String, max_pages : Int32?, force_refresh : Bool, log_io : IO) : Array(Tuple(String, String))
-      use_cache = max_pages.nil? && !force_refresh
-
-      if use_cache
-        if cached = read_repo_catalog_cache?(log_io)
-          log_io.puts "Repo catalog: using cache (#{cached.size} repos, TTL #{repo_cache_ttl.inspect})"
-          return cached
-        end
-      else
-        log_io.puts "Repo catalog: fetching live (cache disabled: max_pages=#{max_pages.inspect}, refresh=#{force_refresh})"
-      end
-
-      repos = fetch_crystal_repos_from_api(token, max_pages, log_io)
-
-      if use_cache
-        write_repo_catalog_cache(repos, log_io)
-      end
-
-      repos
-    end
-
-    private def repo_cache_path : String
-      ENV["GITHUB_CRYSTAL_REPOS_CACHE_PATH"]? || File.join("data", "github_crystal_repos_cache.json")
-    end
-
-    private def repo_cache_ttl : Time::Span
-      ttl_hours_from_env("GITHUB_CRYSTAL_REPOS_CACHE_TTL_HOURS")
-    end
-
-    private def commits_cache_path : String
-      ENV["GITHUB_CRYSTAL_COMMITS_CACHE_PATH"]? || File.join("data", "github_crystal_commits_cache.json")
-    end
-
-    private def commits_cache_ttl : Time::Span
-      ttl_hours_from_env("GITHUB_CRYSTAL_COMMITS_CACHE_TTL_HOURS")
-    end
-
-    private def ttl_hours_from_env(name : String) : Time::Span
-      hours = ENV[name]?.try(&.to_i?) || 24
-      hours = 24 if hours < 1
-      hours.hours
-    end
-
-    private def commits_since_cache_key : String
-      @options.since.to_utc.to_s("%Y-%m-%dT%H:%M:%SZ")
-    end
-
-    private def commits_cache_enabled? : Bool
-      @options.max_commit_pages_per_repo.nil?
-    end
-
-    private alias CommitsRepoCacheEntry = NamedTuple(fetched_at: Time, logins: Set(String))
-
-    private def load_commits_cache_window(since_key : String, log_io : IO) : Hash(String, CommitsRepoCacheEntry)
-      path = commits_cache_path
-      unless File.file?(path)
-        return Hash(String, CommitsRepoCacheEntry).new
-      end
-
-      raw = File.read(path)
-      json = JSON.parse(raw)
-      windows = json["windows"]?.try(&.as_h?) || Hash(String, JSON::Any).new
-      win = windows[since_key]?.try(&.as_h?)
-      unless win
-        return Hash(String, CommitsRepoCacheEntry).new
-      end
-
-      repos_json = win["repos"]?.try(&.as_h?) || Hash(String, JSON::Any).new
-      result = Hash(String, CommitsRepoCacheEntry).new
-      repos_json.each do |full_name, entry|
-        h = entry.as_h
-        t = Time.parse_iso8601(h["fetched_at"].as_s).to_utc
-        logins = Set.new(h["logins"].as_a.map(&.as_s))
-        result[full_name] = {fetched_at: t, logins: logins}
-      end
-      result
-    rescue ex : JSON::ParseException | ArgumentError | KeyError
-      log_io.puts "Commits cache unreadable (#{ex.message}), starting empty for window #{since_key}"
-      Hash(String, CommitsRepoCacheEntry).new
-    end
-
-    private def write_commits_cache_window(since_key : String, data : Hash(String, CommitsRepoCacheEntry), log_io : IO)
-      path = commits_cache_path
-      dir = File.dirname(path)
-      Dir.mkdir_p(dir) unless Dir.exists?(dir)
-
-      final_windows = Hash(String, JSON::Any).new
-      if File.file?(path)
-        begin
-          old_root = JSON.parse(File.read(path))
-          old_root["windows"]?.try(&.as_h).try &.each do |k, v|
-            final_windows[k] = v unless k == since_key
-          end
-        rescue JSON::ParseException
-          # overwrite with fresh structure
-        end
-      end
-      final_windows[since_key] = commits_window_to_json_any(data)
-
-      payload = {"version" => JSON::Any.new(1_i64), "windows" => JSON::Any.new(final_windows)}
-      File.write(path, payload.to_json)
-      log_io.puts "Committers cache: wrote #{data.size} repos for since #{since_key} to #{path}"
-    end
-
-    private def commits_window_to_json_any(data : Hash(String, CommitsRepoCacheEntry)) : JSON::Any
-      repos_inner = Hash(String, Hash(String, Array(String) | String)).new
-      data.each do |fn, e|
-        repos_inner[fn] = {
-          "fetched_at" => e[:fetched_at].to_utc.to_s("%Y-%m-%dT%H:%M:%SZ"),
-          "logins"     => e[:logins].to_a,
-        }
-      end
-      JSON.parse({"repos" => repos_inner}.to_json)
-    end
-
-    private def read_repo_catalog_cache?(log_io : IO) : Array(Tuple(String, String))?
-      path = repo_cache_path
-      return nil unless File.file?(path)
-      raw = File.read(path)
-      json = JSON.parse(raw)
-      fetched_at = Time.parse_iso8601(json["fetched_at"].as_s).to_utc
-      age = Time.utc - fetched_at
-      if age > repo_cache_ttl
-        log_io.puts "Repo catalog cache stale (#{age.inspect} old at #{path}), refreshing from API"
-        return nil
-      end
-      items = json["repos"].as_a
-      repos = items.map do |row|
-        pair = row.as_a
-        {pair[0].as_s, pair[1].as_s}
-      end
-      repos
-    rescue ex : JSON::ParseException | ArgumentError | IndexError
-      log_io.puts "Repo catalog cache unreadable (#{ex.message}), refreshing from API"
-      nil
+    # Search public repos: language:Crystal fork:false. Always hits the Search API (no catalog cache).
+    private def fetch_crystal_repos(token : String, max_pages : Int32?, log_io : IO) : Array(CrystalRepoHit)
+      fetch_crystal_repos_from_api(token, max_pages, log_io)
     end
 
     private def stars_partition_upper_bound : Int64
@@ -444,7 +246,7 @@ module CrystalCommunity
       q_raw : String,
       token : String,
       log_io : IO,
-      acc : Set(Tuple(String, String)),
+      acc : Hash(String, CrystalRepoHit),
       label : String? = nil
     )
       enc = URI.encode_www_form(q_raw)
@@ -461,7 +263,8 @@ module CrystalCommunity
         items.each do |item|
           full_name = item["full_name"].as_s
           owner_login = item["owner"]["login"].as_s
-          acc << {full_name, owner_login}
+          created_at = Time.parse_iso8601(item["created_at"].as_s).to_utc
+          acc[full_name] = CrystalRepoHit.new(full_name, owner_login, created_at)
         end
         tag = label || q_raw
         log_io.puts "  #{tag} — page #{page}: +#{items.size} (catalog now #{acc.size} unique)"
@@ -470,7 +273,7 @@ module CrystalCommunity
       end
     end
 
-    private def partition_star_range(lo : Int64, hi : Int64, token : String, log_io : IO, acc : Set(Tuple(String, String)))
+    private def partition_star_range(lo : Int64, hi : Int64, token : String, log_io : IO, acc : Hash(String, CrystalRepoHit))
       q_raw = "#{BASE_REPO_SEARCH} stars:#{lo}..#{hi}"
       total = search_repositories_total_count(q_raw, token)
       return if total == 0
@@ -488,7 +291,7 @@ module CrystalCommunity
       end
     end
 
-    private def partition_pushed_window(lo_t : Time, hi_t : Time, stars_qual : String, token : String, log_io : IO, acc : Set(Tuple(String, String)))
+    private def partition_pushed_window(lo_t : Time, hi_t : Time, stars_qual : String, token : String, log_io : IO, acc : Hash(String, CrystalRepoHit))
       lo_d = lo_t.to_utc.to_s("%Y-%m-%d")
       hi_d = hi_t.to_utc.to_s("%Y-%m-%d")
       q_raw = "#{BASE_REPO_SEARCH} #{stars_qual} pushed:#{lo_d}..#{hi_d}"
@@ -509,7 +312,7 @@ module CrystalCommunity
       end
     end
 
-    private def consume_stars_strictly_above(bound : Int64, token : String, log_io : IO, acc : Set(Tuple(String, String)))
+    private def consume_stars_strictly_above(bound : Int64, token : String, log_io : IO, acc : Hash(String, CrystalRepoHit))
       q_raw = "#{BASE_REPO_SEARCH} stars:>#{bound}"
       total = search_repositories_total_count(q_raw, token)
       return if total == 0
@@ -524,26 +327,26 @@ module CrystalCommunity
       consume_stars_strictly_above(hi, token, log_io, acc)
     end
 
-    private def fetch_crystal_repos_partitioned(token : String, log_io : IO) : Array(Tuple(String, String))
-      acc = Set(Tuple(String, String)).new
+    private def fetch_crystal_repos_partitioned(token : String, log_io : IO) : Array(CrystalRepoHit)
+      acc = Hash(String, CrystalRepoHit).new
       upper = stars_partition_upper_bound
       base_total = search_repositories_total_count(BASE_REPO_SEARCH, token)
       log_io.puts "Repo catalog: GitHub total_count≈#{base_total} for `#{BASE_REPO_SEARCH}` (max 1000 hits/query — partitioning when needed)"
       if base_total <= 1000
         fetch_search_query_pages_into(BASE_REPO_SEARCH, token, log_io, acc, "single-query catalog")
-        arr = acc.to_a
+        arr = acc.values.sort_by!(&.full_name)
         log_io.puts "Repo catalog: #{arr.size} unique repos (single search, under cap)"
         return arr
       end
       partition_star_range(0_i64, upper, token, log_io, acc)
       consume_stars_strictly_above(upper, token, log_io, acc)
-      arr = acc.to_a
+      arr = acc.values.sort_by!(&.full_name)
       log_io.puts "Repo catalog: #{arr.size} unique repos (partitioned search, target was ~#{base_total})"
       arr
     end
 
-    private def fetch_crystal_repos_legacy_limited(token : String, max_pages : Int32, log_io : IO) : Array(Tuple(String, String))
-      repos = [] of Tuple(String, String)
+    private def fetch_crystal_repos_legacy_limited(token : String, max_pages : Int32, log_io : IO) : Array(CrystalRepoHit)
+      by_name = Hash(String, CrystalRepoHit).new
       page = 1
       loop do
         break if page > max_pages
@@ -556,29 +359,18 @@ module CrystalCommunity
         items.each do |item|
           full_name = item["full_name"].as_s
           owner_login = item["owner"]["login"].as_s
-          repos << {full_name, owner_login}
+          created_at = Time.parse_iso8601(item["created_at"].as_s).to_utc
+          by_name[full_name] = CrystalRepoHit.new(full_name, owner_login, created_at)
         end
         total_count = json["total_count"]?.try(&.as_i) || 0
         log_io.puts "Repos page #{page}: fetched #{items.size} (total_count=#{total_count})"
         page += 1
         break if page > MAX_SEARCH_PAGES
       end
-      repos
+      by_name.values.sort_by!(&.full_name)
     end
 
-    private def write_repo_catalog_cache(repos : Array(Tuple(String, String)), log_io : IO)
-      path = repo_cache_path
-      dir = File.dirname(path)
-      Dir.mkdir_p(dir) unless Dir.exists?(dir)
-      payload = {
-        "fetched_at" => Time.utc.to_s("%Y-%m-%dT%H:%M:%SZ"),
-        "repos"      => repos.map { |(fn, o)| [fn, o] of String },
-      }
-      File.write(path, payload.to_json)
-      log_io.puts "Repo catalog: wrote cache (#{repos.size} repos) to #{path}"
-    end
-
-    private def fetch_crystal_repos_from_api(token : String, max_pages : Int32?, log_io : IO) : Array(Tuple(String, String))
+    private def fetch_crystal_repos_from_api(token : String, max_pages : Int32?, log_io : IO) : Array(CrystalRepoHit)
       @catalog_search_probe_count = 0
       @catalog_search_page_fetches = 0
       result = if mp = max_pages

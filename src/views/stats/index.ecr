@@ -35,7 +35,7 @@
           </div>
         </div>
         <p class="stats-meta" style="margin-top: 1.25rem; color: var(--text-secondary); font-size: 0.9rem;">
-          Commit counts use commits since <strong><%= gs.since.to_utc.to_s("%Y-%m-%d") %></strong> (UTC), <code>committer.login</code> only, bots excluded.
+          Committers counted from commits on or after <strong><%= gs.since.to_utc.to_s("%Y-%m-%d") %></strong> UTC (~1 year rolling window at collection time), only repos that young by <code>created_at</code>; <code>committer.login</code> only, bots excluded.
           Last collected <strong><%= gs.collected_at.to_utc.to_s("%Y-%m-%d") %></strong>
           <span class="stats-meta-time"><%= gs.collected_at.to_utc.to_s("%H:%M:%S") %> UTC</span>.
         </p>
