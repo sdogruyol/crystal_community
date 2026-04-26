@@ -8,117 +8,142 @@
   twitter_description = page_description
 %>
 
-<section class="hero" aria-labelledby="stats-heading">
+<section class="hero stats-hero" aria-labelledby="stats-heading">
   <h1 id="stats-heading">Crystal on GitHub</h1>
-  <p class="hero-join-text">
-    Public repository metrics from the GitHub Search API (non-fork Crystal repos). Values refresh when the stats job runs; the 30-day window is UTC from each snapshot time.
+  <p class="stats-intro">
+    Public repository metrics from the GitHub Search API (non-fork Crystal repos). The 30-day window is UTC from each snapshot; values update when the stats job runs.
   </p>
 </section>
 
-<section class="developers" aria-label="GitHub ecosystem statistics">
+<div class="stats-page">
   <% if gs = github_stat %>
-    <ul class="developer-list" style="list-style: none;">
-      <li class="developer-card">
-        <h2 class="visually-hidden">Latest snapshot</h2>
-        <div class="developer-stats">
-          <div class="stat-item">
-            <span class="stat-value"><%= gs.repos_scanned %></span>
-            <span>Crystal repos</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value"><%= gs.unique_owners %></span>
-            <span>Unique owners (bots excluded)</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value"><%= gs.repos_pushed_last_30d %></span>
-            <span>Pushed in last 30 days</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value"><%= gs.repos_created_last_30d %></span>
-            <span>Created in last 30 days</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value"><%= gs.total_stars %></span>
-            <span>Total stars (sum)</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value"><%= gs.repos_owner_user %></span>
-            <span>Repos — user owners</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value"><%= gs.repos_owner_org %></span>
-            <span>Repos — organizations</span>
-          </div>
+    <% star_buckets = [
+      {"0", gs.stars_bucket_0},
+      {"1–10", gs.stars_bucket_1_10},
+      {"11–100", gs.stars_bucket_11_100},
+      {"101–1000", gs.stars_bucket_101_1000},
+      {"1001+", gs.stars_bucket_1001_plus},
+    ] %>
+    <% star_max = star_buckets.max_of? { |(_, c)| c } || 1 %>
+    <% topic_max = gs.top_topics.max_of? { |(_, c)| c } || 1 %>
+
+    <section class="stats-panel stats-panel--snapshot" aria-labelledby="snapshot-title">
+      <header class="stats-panel-header">
+        <div>
+          <h2 id="snapshot-title" class="stats-panel-title">Latest snapshot</h2>
+          <p class="stats-panel-sub">Collected <time datetime="<%= gs.collected_at.to_utc.to_s("%Y-%m-%dT%H:%M:%SZ") %>"><%= gs.collected_at.to_utc.to_s("%Y-%m-%d") %></time> at <%= gs.collected_at.to_utc.to_s("%H:%M") %> UTC · 30-day window from <%= gs.since.to_utc.to_s("%Y-%m-%d") %></p>
+        </div>
+      </header>
+
+      <div class="stats-kpi-grid" role="list">
+        <article class="stats-kpi" role="listitem">
+          <span class="stats-kpi-value"><%= gs.repos_scanned %></span>
+          <span class="stats-kpi-label">Crystal repos</span>
+        </article>
+        <article class="stats-kpi" role="listitem">
+          <span class="stats-kpi-value"><%= gs.total_stars %></span>
+          <span class="stats-kpi-label">Total stars</span>
+        </article>
+        <article class="stats-kpi stats-kpi--accent" role="listitem">
+          <span class="stats-kpi-value"><%= gs.repos_pushed_last_30d %></span>
+          <span class="stats-kpi-label">Pushed in last 30 days</span>
+        </article>
+        <article class="stats-kpi stats-kpi--accent" role="listitem">
+          <span class="stats-kpi-value"><%= gs.repos_created_last_30d %></span>
+          <span class="stats-kpi-label">Created in last 30 days</span>
+        </article>
+        <article class="stats-kpi" role="listitem">
+          <span class="stats-kpi-value"><%= gs.unique_owners %></span>
+          <span class="stats-kpi-label">Unique owners <span class="stats-kpi-hint">(bots excluded)</span></span>
+        </article>
+        <article class="stats-kpi" role="listitem">
+          <span class="stats-kpi-value"><%= gs.repos_owner_user %></span>
+          <span class="stats-kpi-label">User-owned repos</span>
+        </article>
+        <article class="stats-kpi" role="listitem">
+          <span class="stats-kpi-value"><%= gs.repos_owner_org %></span>
+          <span class="stats-kpi-label">Organization repos</span>
+        </article>
+      </div>
+
+      <div class="stats-split">
+        <div class="stats-split-col">
+          <h3 class="stats-section-heading">Star distribution</h3>
+          <p class="stats-section-lead">Repos by GitHub star count (this catalog).</p>
+          <ul class="stats-hbar-list" aria-label="Repositories by star count">
+            <% star_buckets.each do |(label, count)| %>
+              <li class="stats-hbar">
+                <div class="stats-hbar-top">
+                  <span class="stats-hbar-label"><%= label %> stars</span>
+                  <span class="stats-hbar-count"><%= count %></span>
+                </div>
+                <div class="stats-hbar-track" role="presentation">
+                  <div class="stats-hbar-fill stats-hbar-fill--stars" style="width: <%= star_max > 0 ? (100.0 * count / star_max).round(1) : 0 %>%;"></div>
+                </div>
+              </li>
+            <% end %>
+          </ul>
         </div>
 
-        <h3 class="stats-subheading">Star distribution</h3>
-        <% star_buckets = [
-          {"0", gs.stars_bucket_0},
-          {"1–10", gs.stars_bucket_1_10},
-          {"11–100", gs.stars_bucket_11_100},
-          {"101–1000", gs.stars_bucket_101_1000},
-          {"1001+", gs.stars_bucket_1001_plus},
-        ] %>
-        <% star_max = star_buckets.max_of? { |(_, c)| c } || 1 %>
-        <ul class="stats-bar-list" aria-label="Repositories by star count">
-          <% star_buckets.each do |(label, count)| %>
-            <li class="stats-bar-row">
-              <span class="stats-bar-label"><%= label %> stars</span>
-              <div class="stats-bar-track" role="presentation">
-                <div class="stats-bar-fill" style="width: <%= star_max > 0 ? (100.0 * count / star_max).round(1) : 0 %>%;"></div>
-              </div>
-              <span class="stats-bar-count"><%= count %></span>
-            </li>
+        <div class="stats-split-col">
+          <h3 class="stats-section-heading">Top topics</h3>
+          <p class="stats-section-lead">Most common <code class="stats-inline-code">topics</code> on repos in this snapshot.</p>
+          <% if gs.top_topics.empty? %>
+            <p class="stats-muted">No topics in this snapshot.</p>
+          <% else %>
+            <ol class="stats-topic-list" aria-label="Top repository topics">
+              <% gs.top_topics.each_with_index do |(topic, count), i| %>
+                <li class="stats-topic-row">
+                  <span class="stats-topic-num" aria-hidden="true"><%= i + 1 %></span>
+                  <div class="stats-topic-body">
+                    <div class="stats-hbar-top">
+                      <span class="stats-topic-pill"><%= HTML.escape(topic) %></span>
+                      <span class="stats-hbar-count"><%= count %></span>
+                    </div>
+                    <div class="stats-hbar-track" role="presentation">
+                      <div class="stats-hbar-fill stats-hbar-fill--topics" style="width: <%= topic_max > 0 ? (100.0 * count / topic_max).round(1) : 0 %>%;"></div>
+                    </div>
+                  </div>
+                </li>
+              <% end %>
+            </ol>
           <% end %>
-        </ul>
+        </div>
+      </div>
+    </section>
 
-        <h3 class="stats-subheading">Top topics</h3>
-        <% if gs.top_topics.empty? %>
-          <p class="stats-muted">No topics in this snapshot.</p>
-        <% else %>
-          <ol class="stats-topics-list">
-            <% gs.top_topics.each do |(topic, count)| %>
-              <li><span class="stats-topic-name"><%= HTML.escape(topic) %></span> <span class="stats-topic-count"><%= count %></span></li>
-            <% end %>
-          </ol>
-        <% end %>
+    <section class="stats-panel stats-panel--history" aria-labelledby="timeseries-heading">
+      <h2 id="timeseries-heading" class="stats-panel-title">History</h2>
+      <p class="stats-panel-sub">Last <%= github_stat_series.size %> collector runs (newest first in the table).</p>
 
-        <p class="stats-meta" style="margin-top: 1.25rem; color: var(--text-secondary); font-size: 0.9rem;">
-          30-day window starts <strong><%= gs.since.to_utc.to_s("%Y-%m-%d") %></strong> UTC (rolling at collection time).
-          Last collected <strong><%= gs.collected_at.to_utc.to_s("%Y-%m-%d") %></strong>
-          <span class="stats-meta-time"><%= gs.collected_at.to_utc.to_s("%H:%M:%S") %> UTC</span>.
-        </p>
-      </li>
-    </ul>
-
-    <section class="developer-card stats-timeseries" aria-labelledby="timeseries-heading">
-      <h2 id="timeseries-heading" class="stats-subheading">History (last <%= github_stat_series.size %> runs)</h2>
-      <% if github_stat_series.size < 2 %>
-        <p class="stats-muted">Run the stats job at least twice to see trend lines.</p>
+      <% if github_stat_series.size >= 2 %>
+        <div class="stats-chart-card">
+          <p class="stats-chart-legend">
+            <span class="stats-legend-item"><span class="stats-legend-swatch stats-legend-repos"></span> Repos</span>
+            <span class="stats-legend-item"><span class="stats-legend-swatch stats-legend-pushed"></span> Pushed 30d</span>
+            <span class="stats-legend-item"><span class="stats-legend-swatch stats-legend-created"></span> Created 30d</span>
+            <span class="stats-legend-item"><span class="stats-legend-swatch stats-legend-stars"></span> Total stars</span>
+          </p>
+          <p class="stats-muted stats-chart-note">Lines are each scaled to their own max in this window (shape comparison only).</p>
+          <svg class="stats-chart-svg" viewBox="0 0 1000 220" preserveAspectRatio="none" role="img" aria-label="Normalized trends for repos, 30-day activity, and total stars">
+            <g fill="none" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round">
+              <% unless chart_line_repos.empty? %>
+                <polyline class="stats-line-repos" points="<%= chart_line_repos %>" />
+              <% end %>
+              <% unless chart_line_pushed.empty? %>
+                <polyline class="stats-line-pushed" points="<%= chart_line_pushed %>" />
+              <% end %>
+              <% unless chart_line_created.empty? %>
+                <polyline class="stats-line-created" points="<%= chart_line_created %>" />
+              <% end %>
+              <% unless chart_line_stars.empty? %>
+                <polyline class="stats-line-stars" points="<%= chart_line_stars %>" />
+              <% end %>
+            </g>
+          </svg>
+        </div>
       <% else %>
-        <p class="stats-chart-legend">
-          <span class="stats-legend-item"><span class="stats-legend-swatch stats-legend-repos"></span> Repos</span>
-          <span class="stats-legend-item"><span class="stats-legend-swatch stats-legend-pushed"></span> Pushed 30d</span>
-          <span class="stats-legend-item"><span class="stats-legend-swatch stats-legend-created"></span> Created 30d</span>
-          <span class="stats-legend-item"><span class="stats-legend-swatch stats-legend-stars"></span> Total stars</span>
-        </p>
-        <p class="stats-muted stats-chart-note">Each line is scaled to its own maximum in this window (normalized), so you can compare shape, not absolute scale across metrics.</p>
-        <svg class="stats-chart-svg" viewBox="0 0 1000 220" preserveAspectRatio="none" role="img" aria-label="Normalized trends for repos, 30-day activity, and total stars">
-          <g fill="none" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round">
-            <% unless chart_line_repos.empty? %>
-              <polyline class="stats-line-repos" points="<%= chart_line_repos %>" />
-            <% end %>
-            <% unless chart_line_pushed.empty? %>
-              <polyline class="stats-line-pushed" points="<%= chart_line_pushed %>" />
-            <% end %>
-            <% unless chart_line_created.empty? %>
-              <polyline class="stats-line-created" points="<%= chart_line_created %>" />
-            <% end %>
-            <% unless chart_line_stars.empty? %>
-              <polyline class="stats-line-stars" points="<%= chart_line_stars %>" />
-            <% end %>
-          </g>
-        </svg>
+        <p class="stats-muted">Run the stats job at least twice to see trend lines.</p>
       <% end %>
 
       <div class="stats-table-wrap">
@@ -150,8 +175,8 @@
       </div>
     </section>
   <% else %>
-    <div class="developer-card empty-state" role="status">
-      <p>No GitHub stats yet.</p>
-    </div>
+    <section class="stats-panel stats-panel--empty" role="status">
+      <p class="stats-empty-msg">No GitHub stats yet. Run the collector after configuring <code class="stats-inline-code">DATABASE_URL</code> and <code class="stats-inline-code">GITHUB_TOKEN</code>.</p>
+    </section>
   <% end %>
-</section>
+</div>
