@@ -9,7 +9,7 @@
 %>
 
 <section class="hero stats-hero" aria-labelledby="stats-heading">
-  <h1 id="stats-heading">Crystal in Numbers</h1>
+  <h1 id="stats-heading">Crystal Stats</h1>
   <p class="stats-intro stats-intro--lead">
     A data-driven look at Crystal: projects on GitHub, how the community stars them, who is shipping commits, and what topics show up most in the open source catalog.
   </p>
@@ -29,6 +29,18 @@
     ] %>
     <% star_max = star_buckets.max_of? { |(_, c)| c } || 1 %>
     <% topic_max = gs.top_topics.max_of? { |(_, c)| c } || 1 %>
+
+    <% if gs.total_stars >= 100_000 %>
+      <aside class="stats-stars-milestone" aria-labelledby="milestone-heading">
+        <div class="stats-stars-milestone__badge" aria-hidden="true">100K+</div>
+        <div class="stats-stars-milestone__body">
+          <h2 id="milestone-heading" class="stats-stars-milestone__title">100K+ GitHub stars—and counting</h2>
+          <p class="stats-stars-milestone__text">
+            Public Crystal repositories in this catalog total <strong><%= CrystalCommunity::StatsController.format_int_commas(gs.total_stars) %></strong> GitHub stars—past the <strong>100,000</strong> mark—a clear signal of how developers show appreciation for the ecosystem.
+          </p>
+        </div>
+      </aside>
+    <% end %>
 
     <section class="stats-panel stats-panel--snapshot" aria-labelledby="snapshot-title">
       <header class="stats-panel-header stats-snapshot-header">
@@ -214,7 +226,7 @@
     </section>
   <% else %>
     <section class="stats-panel stats-panel--empty" role="status">
-      <p class="stats-empty-msg"><strong>Crystal in Numbers</strong> has no data yet. Wire up <code class="stats-inline-code">DATABASE_URL</code> and <code class="stats-inline-code">GITHUB_TOKEN</code>, then run the collector to light up this page.</p>
+      <p class="stats-empty-msg"><strong>Crystal Stats</strong> has no data yet. Wire up <code class="stats-inline-code">DATABASE_URL</code> and <code class="stats-inline-code">GITHUB_TOKEN</code>, then run the collector to light up this page.</p>
     </section>
   <% end %>
 </div>

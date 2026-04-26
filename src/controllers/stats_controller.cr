@@ -3,9 +3,25 @@ require "kemal"
 class CrystalCommunity::StatsController
   CHART_HISTORY_LIMIT = 90
 
+  def self.format_int_commas(n : Int64) : String
+    return "0" if n == 0
+    neg = n < 0
+    v = n.abs
+    parts = [] of String
+    first_chunk = true
+    while v > 0
+      chunk = (v % 1000).to_s
+      chunk = chunk.rjust(3, '0') unless first_chunk
+      parts.unshift chunk
+      first_chunk = false
+      v //= 1000
+    end
+    (neg ? "-" : "") + parts.join(",")
+  end
+
   def self.index(env)
-    page_title = "Crystal in Numbers — ecosystem stats"
-    page_description = "Crystal in Numbers: open source projects on GitHub, stars, fresh activity, new repos, and trending topics—updated as we scan public data."
+    page_title = "Crystal Stats — ecosystem stats"
+    page_description = "Crystal Stats: open source projects on GitHub, stars, fresh activity, new repos, and trending topics—updated as we scan public data."
     request_url = "/stats"
     canonical_url : String? = nil
     og_url : String? = nil
