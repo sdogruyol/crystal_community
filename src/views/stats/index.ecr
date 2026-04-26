@@ -9,9 +9,12 @@
 %>
 
 <section class="hero stats-hero" aria-labelledby="stats-heading">
-  <h1 id="stats-heading">Crystal on GitHub</h1>
-  <p class="stats-intro">
-    Public repository metrics from the GitHub Search API (non-fork Crystal repos). The 30-day window is UTC from each snapshot; values update when the stats job runs.
+  <h1 id="stats-heading">Crystal in Numbers</h1>
+  <p class="stats-intro stats-intro--lead">
+    A data-driven look at Crystal: projects on GitHub, how the community stars them, who is shipping commits, and what topics show up most in the open source catalog.
+  </p>
+  <p class="stats-intro stats-intro--fineprint">
+    Built from GitHub’s public search index (non-fork repositories tagged as Crystal). Each snapshot uses a rolling 30-day window in UTC; figures refresh when the collector runs.
   </p>
 </section>
 
@@ -28,50 +31,61 @@
     <% topic_max = gs.top_topics.max_of? { |(_, c)| c } || 1 %>
 
     <section class="stats-panel stats-panel--snapshot" aria-labelledby="snapshot-title">
-      <header class="stats-panel-header">
-        <div>
-          <h2 id="snapshot-title" class="stats-panel-title">Latest snapshot</h2>
-          <p class="stats-panel-sub">Collected <time datetime="<%= gs.collected_at.to_utc.to_s("%Y-%m-%dT%H:%M:%SZ") %>"><%= gs.collected_at.to_utc.to_s("%Y-%m-%d") %></time> at <%= gs.collected_at.to_utc.to_s("%H:%M") %> UTC · 30-day window from <%= gs.since.to_utc.to_s("%Y-%m-%d") %></p>
+      <header class="stats-panel-header stats-snapshot-header">
+        <div class="stats-snapshot-header__intro">
+          <p class="stats-snapshot-eyebrow">Crystal language · GitHub</p>
+          <h2 id="snapshot-title" class="stats-panel-title stats-snapshot-title">Ecosystem at a glance</h2>
+          <p class="stats-snapshot-lead">One pass over public Crystal repositories—how big the catalog is, what moved lately, and how ownership splits out.</p>
         </div>
+        <ul class="stats-snapshot-badges" aria-label="Snapshot metadata">
+          <li class="stats-snapshot-badges__item">
+            <span class="stats-snapshot-badge">
+              <span class="stats-snapshot-badge__label">Last collected</span>
+              <span class="stats-snapshot-badge__value">
+                <time datetime="<%= gs.collected_at.to_utc.to_s("%Y-%m-%dT%H:%M:%SZ") %>"><%= gs.collected_at.to_utc.to_s("%Y-%m-%d") %></time><span aria-hidden="true"> · </span><span class="stats-snapshot-badge__time"><%= gs.collected_at.to_utc.to_s("%H:%M") %> UTC</span>
+              </span>
+            </span>
+          </li>
+        </ul>
       </header>
 
       <div class="stats-kpi-grid" role="list">
         <article class="stats-kpi" role="listitem">
           <span class="stats-kpi-value"><%= gs.repos_scanned %></span>
-          <span class="stats-kpi-label">Crystal repos</span>
+          <span class="stats-kpi-label">Crystal projects on GitHub</span>
         </article>
         <article class="stats-kpi" role="listitem">
           <span class="stats-kpi-value"><%= gs.total_stars %></span>
-          <span class="stats-kpi-label">Total stars</span>
+          <span class="stats-kpi-label">Stars across the catalog</span>
         </article>
         <article class="stats-kpi stats-kpi--accent" role="listitem">
           <span class="stats-kpi-value"><%= gs.repos_pushed_last_30d %></span>
-          <span class="stats-kpi-label">Pushed in last 30 days</span>
+          <span class="stats-kpi-label">Projects with fresh commits (30d)</span>
         </article>
         <article class="stats-kpi stats-kpi--accent" role="listitem">
           <span class="stats-kpi-value"><%= gs.repos_created_last_30d %></span>
-          <span class="stats-kpi-label">Created in last 30 days</span>
+          <span class="stats-kpi-label">New Crystal repos (30d)</span>
         </article>
         <article class="stats-kpi" role="listitem">
           <span class="stats-kpi-value"><%= gs.unique_owners %></span>
-          <span class="stats-kpi-label">Unique owners <span class="stats-kpi-hint">(bots excluded)</span></span>
+          <span class="stats-kpi-label">Publishers &amp; maintainers <span class="stats-kpi-hint">(bots excluded)</span></span>
         </article>
         <article class="stats-kpi" role="listitem">
           <span class="stats-kpi-value"><%= gs.repos_owner_user %></span>
-          <span class="stats-kpi-label">User-owned repos</span>
+          <span class="stats-kpi-label">Under personal accounts</span>
         </article>
         <article class="stats-kpi" role="listitem">
           <span class="stats-kpi-value"><%= gs.repos_owner_org %></span>
-          <span class="stats-kpi-label">Organization repos</span>
+          <span class="stats-kpi-label">Under organizations</span>
         </article>
       </div>
 
       <div class="stats-split">
         <div class="stats-split-col">
-          <h3 class="stats-section-heading">Star distribution</h3>
-          <p class="stats-section-lead">Repos by GitHub star count (this catalog).</p>
+          <h3 class="stats-section-heading">Where attention clusters</h3>
+          <p class="stats-section-lead">How Crystal projects on GitHub spread across star bands—signal for what the wider community notices.</p>
           <ul class="stats-hbar-list" aria-label="Repositories by star count">
-            <% star_buckets.each do |(label, count)| %>
+            <% star_buckets.reverse.each do |(label, count)| %>
               <li class="stats-hbar">
                 <div class="stats-hbar-top">
                   <span class="stats-hbar-label"><%= label %> stars</span>
@@ -86,13 +100,16 @@
         </div>
 
         <div class="stats-split-col">
-          <h3 class="stats-section-heading">Top topics</h3>
-          <p class="stats-section-lead">Most common <code class="stats-inline-code">topics</code> on repos in this snapshot.</p>
+          <h3 class="stats-section-heading">What people tag</h3>
+          <p class="stats-section-lead">Most-used GitHub <code class="stats-inline-code">topics</code> in this snapshot—hints at frameworks, domains, and tooling the ecosystem talks about.</p>
           <% if gs.top_topics.empty? %>
             <p class="stats-muted">No topics in this snapshot.</p>
           <% else %>
-            <ol class="stats-topic-list" aria-label="Top repository topics">
-              <% gs.top_topics.each_with_index do |(topic, count), i| %>
+            <% topics_all = gs.top_topics %>
+            <% topics_first10 = topics_all.first(10) %>
+            <% topics_rest = topics_all.size > 10 ? topics_all[10, topics_all.size - 10] : [] of Tuple(String, Int32) %>
+            <ol class="stats-topic-list" aria-label="Top repository topics (1–10)">
+              <% topics_first10.each_with_index do |(topic, count), i| %>
                 <li class="stats-topic-row">
                   <span class="stats-topic-num" aria-hidden="true"><%= i + 1 %></span>
                   <div class="stats-topic-body">
@@ -107,14 +124,35 @@
                 </li>
               <% end %>
             </ol>
+            <% unless topics_rest.empty? %>
+              <details class="stats-topics-more">
+                <summary class="stats-topics-more__summary">Click for more <span class="stats-topics-more__count">· <%= topics_rest.size %> more of <%= topics_all.size %> total</span></summary>
+                <ol class="stats-topic-list stats-topic-list--continued" aria-label="Additional repository topics">
+                  <% topics_rest.each_with_index do |(topic, count), j| %>
+                    <li class="stats-topic-row">
+                      <span class="stats-topic-num" aria-hidden="true"><%= 11 + j %></span>
+                      <div class="stats-topic-body">
+                        <div class="stats-hbar-top">
+                          <span class="stats-topic-pill"><%= HTML.escape(topic) %></span>
+                          <span class="stats-hbar-count"><%= count %></span>
+                        </div>
+                        <div class="stats-hbar-track" role="presentation">
+                          <div class="stats-hbar-fill stats-hbar-fill--topics" style="width: <%= topic_max > 0 ? (100.0 * count / topic_max).round(1) : 0 %>%;"></div>
+                        </div>
+                      </div>
+                    </li>
+                  <% end %>
+                </ol>
+              </details>
+            <% end %>
           <% end %>
         </div>
       </div>
     </section>
 
     <section class="stats-panel stats-panel--history" aria-labelledby="timeseries-heading">
-      <h2 id="timeseries-heading" class="stats-panel-title">History</h2>
-      <p class="stats-panel-sub">Last <%= github_stat_series.size %> collector runs (newest first in the table).</p>
+      <h2 id="timeseries-heading" class="stats-panel-title">Momentum over time</h2>
+      <p class="stats-panel-sub">The last <%= github_stat_series.size %> runs of our GitHub scan—see how the Crystal footprint shifts run over run (table: newest first).</p>
 
       <% if github_stat_series.size >= 2 %>
         <div class="stats-chart-card">
@@ -124,7 +162,7 @@
             <span class="stats-legend-item"><span class="stats-legend-swatch stats-legend-created"></span> Created 30d</span>
             <span class="stats-legend-item"><span class="stats-legend-swatch stats-legend-stars"></span> Total stars</span>
           </p>
-          <p class="stats-muted stats-chart-note">Lines are each scaled to their own max in this window (shape comparison only).</p>
+          <p class="stats-muted stats-chart-note">Each line is scaled to its own peak in this window—useful for comparing shape and direction, not absolute scale across metrics.</p>
           <svg class="stats-chart-svg" viewBox="0 0 1000 220" preserveAspectRatio="none" role="img" aria-label="Normalized trends for repos, 30-day activity, and total stars">
             <g fill="none" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round">
               <% unless chart_line_repos.empty? %>
@@ -143,7 +181,7 @@
           </svg>
         </div>
       <% else %>
-        <p class="stats-muted">Run the stats job at least twice to see trend lines.</p>
+        <p class="stats-muted">Run the collector twice or more to unlock trend lines—the first run is your baseline.</p>
       <% end %>
 
       <div class="stats-table-wrap">
@@ -176,7 +214,7 @@
     </section>
   <% else %>
     <section class="stats-panel stats-panel--empty" role="status">
-      <p class="stats-empty-msg">No GitHub stats yet. Run the collector after configuring <code class="stats-inline-code">DATABASE_URL</code> and <code class="stats-inline-code">GITHUB_TOKEN</code>.</p>
+      <p class="stats-empty-msg"><strong>Crystal in Numbers</strong> has no data yet. Wire up <code class="stats-inline-code">DATABASE_URL</code> and <code class="stats-inline-code">GITHUB_TOKEN</code>, then run the collector to light up this page.</p>
     </section>
   <% end %>
 </div>

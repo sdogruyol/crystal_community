@@ -4,8 +4,8 @@ class CrystalCommunity::StatsController
   CHART_HISTORY_LIMIT = 90
 
   def self.index(env)
-    page_title = "Crystal on GitHub — stats"
-    page_description = "Public GitHub metrics for the Crystal ecosystem: repositories, activity, stars, owners, and topics over time."
+    page_title = "Crystal in Numbers — ecosystem stats"
+    page_description = "Crystal in Numbers: open source projects on GitHub, stars, fresh activity, new repos, and trending topics—updated as we scan public data."
     request_url = "/stats"
     canonical_url : String? = nil
     og_url : String? = nil
