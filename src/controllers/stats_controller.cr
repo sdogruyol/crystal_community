@@ -15,9 +15,7 @@ class CrystalCommunity::StatsController
     twitter_description : String? = nil
     twitter_image : String? = nil
 
-    snapshot = CrystalCommunity::GitHubCrystalStatsSnapshot.load?(
-      CrystalCommunity::GITHUB_CRYSTAL_STATS_JSON_PATH
-    )
+    github_stat = CrystalCommunity::DB::GithubStat.latest
 
     render "src/views/stats/index.ecr", "src/views/layouts/application.ecr"
   end

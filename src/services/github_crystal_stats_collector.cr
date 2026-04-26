@@ -5,35 +5,6 @@ require "set"
 require "time"
 
 module CrystalCommunity
-  # Persisted output of {GitHubCrystalStatsCollector} for the web app and cron.
-  struct GitHubCrystalStatsSnapshot
-    include JSON::Serializable
-
-    property since : String
-    property repos_scanned : Int32
-    property unique_owners : Int32
-    property unique_committers : Int32
-    property collected_at : String
-
-    def initialize(@since : String, @repos_scanned : Int32, @unique_owners : Int32, @unique_committers : Int32, @collected_at : String)
-    end
-
-    def self.load?(path : String) : self?
-      return nil unless File.file?(path)
-      raw = File.read(path)
-      return nil if raw.strip.empty?
-      from_json(raw)
-    rescue JSON::ParseException
-      nil
-    end
-
-    def save(path : String)
-      dir = File.dirname(path)
-      Dir.mkdir_p(dir) unless Dir.exists?(dir)
-      File.write(path, to_pretty_json)
-    end
-  end
-
   # Collects public GitHub stats for Crystal repositories via the REST API.
   # Intended for scheduled runs (e.g. hourly cron). Counts only public data.
   #
@@ -103,16 +74,6 @@ module CrystalCommunity
       getter unique_committers : Int32
 
       def initialize(@since : Time, @repos_scanned : Int32, @unique_owners : Int32, @unique_committers : Int32)
-      end
-
-      def to_snapshot(collected_at : Time = Time.utc) : GitHubCrystalStatsSnapshot
-        GitHubCrystalStatsSnapshot.new(
-          since: @since.to_s("%Y-%m-%dT%H:%M:%SZ"),
-          repos_scanned: @repos_scanned,
-          unique_owners: @unique_owners,
-          unique_committers: @unique_committers,
-          collected_at: collected_at.to_s("%Y-%m-%dT%H:%M:%SZ")
-        )
       end
     end
 
