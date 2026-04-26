@@ -9,6 +9,8 @@ targets:
     main: src/app.cr
   micrate:
     main: src/micrate.cr
+  github-crystal-stats:
+    main: src/scripts/github_crystal_stats.cr
 
 dependencies:
   kemal:

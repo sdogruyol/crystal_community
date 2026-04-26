@@ -1,0 +1,51 @@
+<%
+  canonical_url = request_url
+  og_url = request_url
+  og_title = page_title
+  og_description = page_description
+  twitter_url = request_url
+  twitter_title = page_title
+  twitter_description = page_description
+%>
+
+<section class="hero" aria-labelledby="stats-heading">
+  <h1 id="stats-heading">Crystal on GitHub</h1>
+  <p class="hero-join-text">
+    Public repository metrics from the GitHub API (non-fork Crystal repos). Updated when the stats job runs.
+  </p>
+</section>
+
+<section class="developers" aria-label="GitHub ecosystem statistics">
+  <% if snap = snapshot %>
+    <ul class="developer-list" style="list-style: none;">
+      <li class="developer-card">
+        <h2 class="visually-hidden">Repository and contributor metrics</h2>
+        <div class="developer-stats">
+          <div class="stat-item">
+            <span class="stat-value"><%= snap.repos_scanned %></span>
+            <span>Crystal repos</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value"><%= snap.unique_owners %></span>
+            <span>Unique owners with Crystal repository</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value"><%= snap.unique_committers %></span>
+            <span>Unique committers in Crystal repos</span>
+          </div>
+        </div>
+        <p class="stats-meta" style="margin-top: 1.25rem; color: var(--text-secondary); font-size: 0.9rem;">
+          Commit counts use commits since <strong><%= snap.since[0..9] %></strong> (UTC), <code>committer.login</code> only, bots excluded.
+          Last collected <strong><%= snap.collected_at[0..9] %></strong> <span class="stats-meta-time"><%= snap.collected_at[11..18] %> UTC</span>.
+        </p>
+      </li>
+    </ul>
+  <% else %>
+    <div class="developer-card empty-state" role="status">
+      <p>No snapshot file yet. Run the GitHub stats job (see <code>src/scripts/github_crystal_stats.cr</code>) or set <code>GITHUB_CRYSTAL_STATS_JSON</code>.</p>
+      <p style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+        Expected path: <code><%= CrystalCommunity::GITHUB_CRYSTAL_STATS_JSON_PATH %></code>
+      </p>
+    </div>
+  <% end %>
+</section>
