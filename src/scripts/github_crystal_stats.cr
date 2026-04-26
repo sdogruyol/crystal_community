@@ -2,6 +2,9 @@
 #
 # Without --since, the commit window defaults to 365 days ago at 00:00 UTC (same as GitHubCrystalStatsCollector::Options.from_argv).
 #
+# Full repo catalog uses partitioned GitHub Search (stars, then pushed if a star bucket still has >1000 hits),
+# because each search query returns at most 1000 items. Optional: GITHUB_CRYSTAL_STARS_PARTITION_MAX (default 2_000_000).
+#
 # Repo list (`language:Crystal fork:false`) is cached under data/github_crystal_repos_cache.json for
 # GITHUB_CRYSTAL_REPOS_CACHE_TTL_HOURS (default 24) to avoid GitHub Search API pagination on every run.
 # Override path with GITHUB_CRYSTAL_REPOS_CACHE_PATH. Force a fresh catalog with --refresh-repos.

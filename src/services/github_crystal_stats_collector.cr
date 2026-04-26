@@ -9,6 +9,7 @@ module CrystalCommunity
   # Intended for scheduled runs (e.g. hourly cron). Counts only public data.
   #
   # - Excludes forks via repo search query `fork:false`.
+  # - Repo discovery subdivides Search by `stars` (then `pushed` if needed) to approach full universe past the 1000-results/query cap.
   # - Excludes bots by login suffix `"[bot]"`.
   # - For commits: counts only those with `committer.login` present.
   # - Repo catalog and per-repo committer sets can be file-cached (TTL); see collect() and Options.
@@ -100,8 +101,14 @@ module CrystalCommunity
     USER_AGENT        = "crystal-community-github-crystal-stats"
     MAX_SEARCH_PAGES  = 10
     MAX_RATE_LIMIT_WAITS = 32
+    # GitHub Search returns at most 1000 results per query; we subdivide by stars (then pushed) to widen coverage.
+    BASE_REPO_SEARCH       = "language:Crystal fork:false"
+    STARS_TAIL_STEP        = 1_000_000_i64
+    PUSHED_PARTITION_START = Time.utc(2008, 1, 1)
 
     @request_log_io : IO? = nil
+    @catalog_search_probe_count : Int32 = 0
+    @catalog_search_page_fetches : Int32 = 0
 
     def initialize(@options : Options)
       @request_log_io = nil
@@ -413,6 +420,144 @@ module CrystalCommunity
       nil
     end
 
+    private def stars_partition_upper_bound : Int64
+      ENV["GITHUB_CRYSTAL_STARS_PARTITION_MAX"]?.try(&.to_i64?) || 2_000_000_i64
+    end
+
+    private def search_repositories_total_count(q_raw : String, token : String) : Int32
+      @catalog_search_probe_count += 1
+      enc = URI.encode_www_form(q_raw)
+      path = "/search/repositories?q=#{enc}&per_page=1&page=1"
+      json = github_get_json(path, token)
+      json["total_count"]?.try(&.as_i) || 0
+    end
+
+    private def fetch_search_query_pages_into(
+      q_raw : String,
+      token : String,
+      log_io : IO,
+      acc : Set(Tuple(String, String)),
+      label : String? = nil
+    )
+      enc = URI.encode_www_form(q_raw)
+      page = 1
+      loop do
+        @catalog_search_page_fetches += 1
+        path = "/search/repositories?q=#{enc}&per_page=#{DEFAULT_PER_PAGE}&page=#{page}"
+        json = github_get_json(path, token)
+        if json["incomplete_results"]?.try(&.as_bool) == true
+          log_io.puts "  warning: incomplete_results for search slice"
+        end
+        items = json["items"].as_a
+        break if items.empty?
+        items.each do |item|
+          full_name = item["full_name"].as_s
+          owner_login = item["owner"]["login"].as_s
+          acc << {full_name, owner_login}
+        end
+        tag = label || q_raw
+        log_io.puts "  #{tag} — page #{page}: +#{items.size} (catalog now #{acc.size} unique)"
+        page += 1
+        break if page > MAX_SEARCH_PAGES
+      end
+    end
+
+    private def partition_star_range(lo : Int64, hi : Int64, token : String, log_io : IO, acc : Set(Tuple(String, String)))
+      q_raw = "#{BASE_REPO_SEARCH} stars:#{lo}..#{hi}"
+      total = search_repositories_total_count(q_raw, token)
+      return if total == 0
+      if total <= 1000
+        fetch_search_query_pages_into(q_raw, token, log_io, acc, "stars #{lo}..#{hi}")
+        return
+      end
+      if lo < hi
+        mid = (lo + hi) // 2
+        partition_star_range(lo, mid, token, log_io, acc)
+        partition_star_range(mid + 1, hi, token, log_io, acc)
+      else
+        log_io.puts "Repo catalog: stars=#{lo} has #{total} matches (>1000); subdividing by pushed date..."
+        partition_pushed_window(PUSHED_PARTITION_START, Time.utc, "stars:#{lo}..#{hi}", token, log_io, acc)
+      end
+    end
+
+    private def partition_pushed_window(lo_t : Time, hi_t : Time, stars_qual : String, token : String, log_io : IO, acc : Set(Tuple(String, String)))
+      lo_d = lo_t.to_utc.to_s("%Y-%m-%d")
+      hi_d = hi_t.to_utc.to_s("%Y-%m-%d")
+      q_raw = "#{BASE_REPO_SEARCH} #{stars_qual} pushed:#{lo_d}..#{hi_d}"
+      total = search_repositories_total_count(q_raw, token)
+      return if total == 0
+      if total <= 1000
+        fetch_search_query_pages_into(q_raw, token, log_io, acc, "pushed #{lo_d}..#{hi_d} #{stars_qual}")
+        return
+      end
+      span = hi_t - lo_t
+      if span >= 2.days
+        mid_t = lo_t + span / 2
+        partition_pushed_window(lo_t, mid_t, stars_qual, token, log_io, acc)
+        partition_pushed_window(mid_t + 1.second, hi_t, stars_qual, token, log_io, acc)
+      else
+        log_io.puts "  WARNING: #{q_raw} still has total_count=#{total}>1000; keeping first 1000 (GitHub cap) — coverage gap."
+        fetch_search_query_pages_into(q_raw, token, log_io, acc)
+      end
+    end
+
+    private def consume_stars_strictly_above(bound : Int64, token : String, log_io : IO, acc : Set(Tuple(String, String)))
+      q_raw = "#{BASE_REPO_SEARCH} stars:>#{bound}"
+      total = search_repositories_total_count(q_raw, token)
+      return if total == 0
+      if total <= 1000
+        fetch_search_query_pages_into(q_raw, token, log_io, acc, "stars >#{bound}")
+        return
+      end
+      lo = bound + 1
+      hi = bound + STARS_TAIL_STEP
+      log_io.puts "Repo catalog: stars>#{bound} has #{total} matches; narrowing #{lo}..#{hi}..."
+      partition_star_range(lo, hi, token, log_io, acc)
+      consume_stars_strictly_above(hi, token, log_io, acc)
+    end
+
+    private def fetch_crystal_repos_partitioned(token : String, log_io : IO) : Array(Tuple(String, String))
+      acc = Set(Tuple(String, String)).new
+      upper = stars_partition_upper_bound
+      base_total = search_repositories_total_count(BASE_REPO_SEARCH, token)
+      log_io.puts "Repo catalog: GitHub total_count≈#{base_total} for `#{BASE_REPO_SEARCH}` (max 1000 hits/query — partitioning when needed)"
+      if base_total <= 1000
+        fetch_search_query_pages_into(BASE_REPO_SEARCH, token, log_io, acc, "single-query catalog")
+        arr = acc.to_a
+        log_io.puts "Repo catalog: #{arr.size} unique repos (single search, under cap)"
+        return arr
+      end
+      partition_star_range(0_i64, upper, token, log_io, acc)
+      consume_stars_strictly_above(upper, token, log_io, acc)
+      arr = acc.to_a
+      log_io.puts "Repo catalog: #{arr.size} unique repos (partitioned search, target was ~#{base_total})"
+      arr
+    end
+
+    private def fetch_crystal_repos_legacy_limited(token : String, max_pages : Int32, log_io : IO) : Array(Tuple(String, String))
+      repos = [] of Tuple(String, String)
+      page = 1
+      loop do
+        break if page > max_pages
+        @catalog_search_page_fetches += 1
+        q = URI.encode_www_form(BASE_REPO_SEARCH)
+        path = "/search/repositories?q=#{q}&per_page=#{DEFAULT_PER_PAGE}&page=#{page}"
+        json = github_get_json(path, token)
+        items = json["items"].as_a
+        break if items.empty?
+        items.each do |item|
+          full_name = item["full_name"].as_s
+          owner_login = item["owner"]["login"].as_s
+          repos << {full_name, owner_login}
+        end
+        total_count = json["total_count"]?.try(&.as_i) || 0
+        log_io.puts "Repos page #{page}: fetched #{items.size} (total_count=#{total_count})"
+        page += 1
+        break if page > MAX_SEARCH_PAGES
+      end
+      repos
+    end
+
     private def write_repo_catalog_cache(repos : Array(Tuple(String, String)), log_io : IO)
       path = repo_cache_path
       dir = File.dirname(path)
@@ -426,33 +571,16 @@ module CrystalCommunity
     end
 
     private def fetch_crystal_repos_from_api(token : String, max_pages : Int32?, log_io : IO) : Array(Tuple(String, String))
-      repos = [] of Tuple(String, String)
-      page = 1
-
-      loop do
-        break if max_pages && page > max_pages
-
-        q = URI.encode_www_form("language:Crystal fork:false")
-        path = "/search/repositories?q=#{q}&per_page=#{DEFAULT_PER_PAGE}&page=#{page}"
-        json = github_get_json(path, token)
-
-        items = json["items"].as_a
-        break if items.empty?
-
-        items.each do |item|
-          full_name = item["full_name"].as_s
-          owner_login = item["owner"]["login"].as_s
-          repos << {full_name, owner_login}
-        end
-
-        total_count = json["total_count"]?.try(&.as_i) || 0
-        log_io.puts "Repos page #{page}: fetched #{items.size} (total_count=#{total_count})"
-        page += 1
-
-        break if page > MAX_SEARCH_PAGES
+      @catalog_search_probe_count = 0
+      @catalog_search_page_fetches = 0
+      result = if mp = max_pages
+        fetch_crystal_repos_legacy_limited(token, mp, log_io)
+      else
+        fetch_crystal_repos_partitioned(token, log_io)
       end
-
-      repos
+      total = @catalog_search_probe_count + @catalog_search_page_fetches
+      log_io.puts "Repo catalog Search API summary: #{total} GET /search/repositories (#{@catalog_search_probe_count} total_count probes, #{@catalog_search_page_fetches} result pages)"
+      result
     end
 
     private def fetch_committers_for_repo(token : String, full_name : String, since : Time, max_pages : Int32?) : Set(String)
