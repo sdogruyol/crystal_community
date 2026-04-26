@@ -22,6 +22,9 @@
 #   shards build github-crystal-stats
 #   GITHUB_TOKEN=ghp_xxx ./bin/github-crystal-stats
 #
+# GitHub REST: on 403/429 rate limit the collector sleeps until X-RateLimit-Reset (or Retry-After) and retries.
+# Space requests with GITHUB_API_REQUEST_DELAY_MS (default 200) to reduce secondary throttling on big runs.
+#
 # Requires DATABASE_URL (and .env.* loaded from project root when present).
 
 require "dotenv"

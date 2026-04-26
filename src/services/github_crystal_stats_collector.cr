@@ -99,11 +99,24 @@ module CrystalCommunity
     DEFAULT_PER_PAGE  = 100
     USER_AGENT        = "crystal-community-github-crystal-stats"
     MAX_SEARCH_PAGES  = 10
+    MAX_RATE_LIMIT_WAITS = 32
+
+    @request_log_io : IO? = nil
 
     def initialize(@options : Options)
+      @request_log_io = nil
     end
 
     def collect(io : IO = STDOUT, log_io : IO = STDERR) : Result
+      @request_log_io = log_io
+      begin
+        collect_body(io, log_io)
+      ensure
+        @request_log_io = nil
+      end
+    end
+
+    private def collect_body(io : IO, log_io : IO) : Result
       repos = fetch_crystal_repos(@options.token, @options.max_repo_pages, @options.refresh_repo_catalog, log_io)
 
       owner_logins = Set(String).new
@@ -188,27 +201,76 @@ module CrystalCommunity
       )
     end
 
+    private def github_api_log : IO
+      @request_log_io || STDERR
+    end
+
+    private def throttle_github_request
+      ms = ENV["GITHUB_API_REQUEST_DELAY_MS"]?.try(&.to_i?) || 200
+      return if ms <= 0
+      sleep(ms.milliseconds)
+    end
+
+    private def rate_limit_response?(resp : HTTP::Client::Response) : Bool
+      return true if resp.status_code == 429
+      return false unless resp.status_code == 403
+      b = resp.body
+      b.includes?("rate limit") || b.includes?("API rate limit exceeded")
+    end
+
+    private def sleep_for_github_rate_limit(resp : HTTP::Client::Response, log_io : IO)
+      if ra = resp.headers["Retry-After"]?.try(&.to_i?)
+        secs = Math.max(ra, 1)
+        log_io.puts "GitHub rate limit: Retry-After #{secs}s — sleeping..."
+        sleep(secs.seconds)
+        return
+      end
+      if reset_s = resp.headers["X-RateLimit-Reset"]?.try(&.to_i64?)
+        wake = Time.unix(reset_s.to_i) + 2.seconds
+        now = Time.utc
+        span = wake - now
+        span = 1.second if span < 1.second
+        span = 3601.seconds if span > 3601.seconds
+        rem = resp.headers["X-RateLimit-Remaining"]? || "?"
+        log_io.puts "GitHub rate limit (remaining=#{rem}): sleeping #{span.total_seconds.to_i}s until quota reset..."
+        sleep(span)
+        return
+      end
+      log_io.puts "GitHub rate limit: sleeping 90s (no Retry-After / X-RateLimit-Reset)..."
+      sleep(90.seconds)
+    end
+
     private def bot_login?(login : String) : Bool
       login.ends_with?("[bot]")
     end
 
     private def github_get_json(path_with_query : String, token : String) : JSON::Any
-      url = URI.parse(GITHUB_API + path_with_query)
-      headers = HTTP::Headers{
-        "Accept"               => "application/vnd.github+json",
-        "Authorization"        => "Bearer #{token}",
-        "X-GitHub-Api-Version" => "2022-11-28",
-        "User-Agent"           => USER_AGENT,
-      }
+      log_io = github_api_log
+      rate_waits = 0
+      loop do
+        throttle_github_request
+        url = URI.parse(GITHUB_API + path_with_query)
+        headers = HTTP::Headers{
+          "Accept"               => "application/vnd.github+json",
+          "Authorization"        => "Bearer #{token}",
+          "X-GitHub-Api-Version" => "2022-11-28",
+          "User-Agent"           => USER_AGENT,
+        }
 
-      resp = HTTP::Client.get(url, headers)
-      if resp.status_code == 403 && resp.body.includes?("rate limit")
-        raise Error.new("Rate limited by GitHub API. Try again later or reduce scope.")
+        resp = HTTP::Client.get(url, headers)
+        if rate_limit_response?(resp)
+          rate_waits += 1
+          if rate_waits > MAX_RATE_LIMIT_WAITS
+            raise Error.new("GitHub rate limit: gave up after #{MAX_RATE_LIMIT_WAITS} waits. Increase GITHUB_API_REQUEST_DELAY_MS, shorten --since, or run again later (commit cache will resume).")
+          end
+          sleep_for_github_rate_limit(resp, log_io)
+          next
+        end
+        unless (200..299).includes?(resp.status_code)
+          raise Error.new("GET #{path_with_query} failed: HTTP #{resp.status_code}\n#{resp.body}")
+        end
+        return JSON.parse(resp.body)
       end
-      unless (200..299).includes?(resp.status_code)
-        raise Error.new("GET #{path_with_query} failed: HTTP #{resp.status_code}\n#{resp.body}")
-      end
-      JSON.parse(resp.body)
     end
 
     # Search public repos: language:Crystal fork:false.
