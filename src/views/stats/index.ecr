@@ -201,7 +201,7 @@
           <caption class="visually-hidden">Per-run metrics</caption>
           <thead>
             <tr>
-              <th scope="col">Collected (UTC)</th>
+              <th scope="col">Collected</th>
               <th scope="col">Repos</th>
               <th scope="col">Pushed 30d</th>
               <th scope="col">Created 30d</th>
@@ -212,7 +212,7 @@
           <tbody>
             <% github_stat_series.reverse_each do |row| %>
               <tr>
-                <td><%= row.collected_at.to_utc.to_s("%Y-%m-%d %H:%M") %></td>
+                <td><%= row.collected_at.to_utc.to_s("%Y-%m-%d") %></td>
                 <td><%= row.repos_scanned %></td>
                 <td><%= row.repos_pushed_last_30d %></td>
                 <td><%= row.repos_created_last_30d %></td>
