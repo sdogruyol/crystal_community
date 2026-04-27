@@ -163,34 +163,29 @@
     </section>
 
     <section class="stats-panel stats-panel--history" aria-labelledby="timeseries-heading">
-      <h2 id="timeseries-heading" class="stats-panel-title">Momentum over time</h2>
+      <h2 id="timeseries-heading" class="stats-panel-title">Repos &amp; stars over time</h2>
       <p class="stats-panel-sub">The last <%= github_stat_series.size %> runs of our GitHub scan—see how the Crystal footprint shifts run over run (table: newest first).</p>
 
       <% if github_stat_series.size >= 2 %>
         <div class="stats-chart-card">
-          <p class="stats-chart-legend">
-            <span class="stats-legend-item"><span class="stats-legend-swatch stats-legend-repos"></span> Repos</span>
-            <span class="stats-legend-item"><span class="stats-legend-swatch stats-legend-pushed"></span> Pushed 30d</span>
-            <span class="stats-legend-item"><span class="stats-legend-swatch stats-legend-created"></span> Created 30d</span>
-            <span class="stats-legend-item"><span class="stats-legend-swatch stats-legend-stars"></span> Total stars</span>
-          </p>
-          <p class="stats-muted stats-chart-note">Each line is scaled to its own peak in this window—useful for comparing shape and direction, not absolute scale across metrics.</p>
-          <svg class="stats-chart-svg" viewBox="0 0 1000 220" preserveAspectRatio="none" role="img" aria-label="Normalized trends for repos, 30-day activity, and total stars">
-            <g fill="none" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round">
-              <% unless chart_line_repos.empty? %>
-                <polyline class="stats-line-repos" points="<%= chart_line_repos %>" />
-              <% end %>
-              <% unless chart_line_pushed.empty? %>
-                <polyline class="stats-line-pushed" points="<%= chart_line_pushed %>" />
-              <% end %>
-              <% unless chart_line_created.empty? %>
-                <polyline class="stats-line-created" points="<%= chart_line_created %>" />
-              <% end %>
-              <% unless chart_line_stars.empty? %>
-                <polyline class="stats-line-stars" points="<%= chart_line_stars %>" />
-              <% end %>
-            </g>
-          </svg>
+          <p class="stats-muted stats-chart-note">Shared dates along the horizontal axis; each panel uses its own vertical scale.</p>
+          <div class="stats-chart-grid" role="group" aria-label="Repos and total stars over time">
+            <div class="stats-chart-panel">
+              <h3 class="stats-chart-panel__title">Repos</h3>
+              <div class="stats-chart-canvas-wrap">
+                <canvas id="stats-chart-repos" role="img" aria-label="Crystal repositories scanned over time"></canvas>
+              </div>
+            </div>
+            <div class="stats-chart-panel">
+              <h3 class="stats-chart-panel__title">Total stars</h3>
+              <div class="stats-chart-canvas-wrap">
+                <canvas id="stats-chart-stars" role="img" aria-label="Total GitHub stars over time"></canvas>
+              </div>
+            </div>
+          </div>
+          <script type="application/json" id="stats-timeseries-data"><%= stats_chart_json %></script>
+          <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+          <script src="/assets/stats-chart.js"></script>
         </div>
       <% else %>
         <p class="stats-muted">Run the collector twice or more to unlock trend lines—the first run is your baseline.</p>

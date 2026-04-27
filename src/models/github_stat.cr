@@ -90,19 +90,5 @@ module CrystalCommunity::DB
       rows.reverse!
       rows
     end
-
-    # Normalized SVG polyline points "x,y x,y ...". viewBox 0 0 1000 200, y inverted from value.
-    def self.chart_line_points(series : Array(GithubStat), & : GithubStat -> Float64) : String
-      return "" if series.size < 2
-      vals = series.map { |s| yield s }
-      max_v = vals.max
-      return "" if max_v <= 0
-      n = series.size
-      series.each_with_index.map do |_, i|
-        x = n > 1 ? (i.to_f * 1000 / (n - 1)) : 500.0
-        y = 200.0 - (vals[i] * 190.0 / max_v)
-        "#{x.round(2)},#{y.round(2)}"
-      end.join(" ")
-    end
   end
 end
