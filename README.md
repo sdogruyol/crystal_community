@@ -126,17 +126,29 @@ curl -fsSLo- https://raw.githubusercontent.com/samueleaton/sentry/master/install
 
 The `.sentry.yml` file is configured to build `src/app.cr` and run the `./crystal-community` binary, watching `src/**/*.cr` and `src/**/*.ecr` files.
 
-### Fake User Generator (Development)
+### Development Data
 
-Create fake users in the development environment to test the map and developer directory:
+Seed scripts for local development. Use `CRYSTAL_COMMUNITY_ENV=development` after database migrations and a configured `.env.development` (see **Installation** above).
+
+#### Fake User Generator
+
+Create fake users to test the map and developer directory:
 
 ```bash
 CRYSTAL_COMMUNITY_ENV=development crystal run src/seeders/fake_user_generator.cr
 ```
 
-This command creates 100 fake users by default. Users are inserted with random names, bios, locations, avatar URLs, and other profile data.
+Creates 100 fake users by default, with random names, bios, locations, avatar URLs, and other profile data.
 
-> **Note:** Ensure database migrations have been run and `.env.development` is configured before running this command.
+#### Fake GitHub Stats Generator
+
+Populate the `github_stats` table with synthetic rows so the stats page and charts have data without running the real GitHub collector:
+
+```bash
+CRYSTAL_COMMUNITY_ENV=development crystal run src/seeders/fake_github_stat_generator.cr
+```
+
+By default this inserts 30 rows with `collected_at` stepped back one day per row. `repos_scanned` and `total_stars` increase monotonically toward the present so time-series charts trend upward. Other fields (star buckets, owner split, top topics) are generated for plausible-looking dashboards.
 
 ## 📁 Project Structure
 
