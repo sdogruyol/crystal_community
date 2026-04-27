@@ -54,7 +54,7 @@
             <span class="stats-snapshot-badge">
               <span class="stats-snapshot-badge__label">Last collected</span>
               <span class="stats-snapshot-badge__value">
-                <time datetime="<%= gs.collected_at.to_utc.to_s("%Y-%m-%dT%H:%M:%SZ") %>"><%= gs.collected_at.to_utc.to_s("%Y-%m-%d") %></time><span aria-hidden="true"> · </span><span class="stats-snapshot-badge__time"><%= gs.collected_at.to_utc.to_s("%H:%M") %> UTC</span>
+                <time datetime="<%= gs.collected_at.to_utc.to_s("%Y-%m-%d") %>"><%= gs.collected_at.to_utc.to_s("%Y-%m-%d") %></time>
               </span>
             </span>
           </li>

@@ -866,12 +866,6 @@ main:has(.stats-page) {
   font-weight: inherit;
 }
 
-.stats-snapshot-badge__time {
-  font-weight: 500;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-}
-
 .stats-panel--history {
   margin-bottom: 0;
 }
@@ -1367,7 +1361,13 @@ main:has(.stats-page) {
   .stats-panel-header.stats-snapshot-header {
     flex-direction: column;
     align-items: stretch;
-    gap: 1rem;
+    /* Was 1rem; intro + badge are one block, keep them visually tight. */
+    gap: 0.5rem;
+  }
+
+  /* Column layout: `flex: 1 1 17rem` on intro applies to *height* and reserves ~17rem, leaving a large gap before Last collected. */
+  .stats-snapshot-header__intro {
+    flex: 0 0 auto;
   }
 
   .stats-snapshot-badges {
