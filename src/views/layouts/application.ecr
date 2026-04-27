@@ -5,20 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     
     <% 
-      # SEO metadata - variables should be defined in the view file
-      # Defaults are set here as fallback
-      page_title = "Crystal Community - Connect with Crystal Developers Worldwide"
-      page_description = "Join developers from around the world who are passionate about Crystal programming language. Discover Crystal developers, connect with the community, and explore projects."
-      request_url = "/"
-      canonical_url = request_url
-      og_url = request_url
-      og_title = page_title
-      og_description = page_description
-      og_image = "/assets/android-chrome-512x512.png"
-      twitter_url = request_url
-      twitter_title = page_title
-      twitter_description = page_description
-      twitter_image = "/assets/android-chrome-512x512.png"
+      default_page_title = "Crystal Community - Connect with Crystal Developers Worldwide"
+      default_page_description = "Join developers from around the world who are passionate about Crystal programming language. Discover Crystal developers, connect with the community, and explore projects."
+      default_share_image = "/assets/android-chrome-512x512.png"
+
+      page_title = (page_title || default_page_title).not_nil!
+      page_description = (page_description || default_page_description).not_nil!
+      request_url = (request_url || "/").not_nil!
+
+      canonical_url = (canonical_url || request_url).not_nil!
+      og_url = (og_url || request_url).not_nil!
+      og_title = (og_title || page_title).not_nil!
+      og_description = (og_description || page_description).not_nil!
+      og_image = (og_image || default_share_image).not_nil!
+      twitter_url = (twitter_url || request_url).not_nil!
+      twitter_title = (twitter_title || page_title).not_nil!
+      twitter_description = (twitter_description || page_description).not_nil!
+      twitter_image = (twitter_image || default_share_image).not_nil!
     %>
     
     <!-- Primary Meta Tags -->
@@ -98,11 +101,12 @@
   </head>
   <body>
     <header role="banner">
-      <nav role="navigation" aria-label="Main navigation">
+      <nav role="navigation" aria-label="Main navigation" class="site-nav">
         <a href="/" class="nav-logo" aria-label="Crystal Community Home">
           <img src="/assets/crystal_icon.svg" alt="Crystal Programming Language Logo" class="crystal-icon" width="32" height="32" />
           Crystal Community
         </a>
+        <a href="/stats" class="nav-secondary-link">Stats</a>
       </nav>
     </header>
 
