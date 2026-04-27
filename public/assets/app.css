@@ -1229,8 +1229,16 @@ main:has(.stats-page) {
   }
 }
 
+.stats-history-subheading {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.65rem;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
 .stats-table-wrap {
-  margin-top: 0.5rem;
+  margin-top: 0;
   overflow-x: auto;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);

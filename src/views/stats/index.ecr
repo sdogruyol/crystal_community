@@ -191,9 +191,10 @@
         <p class="stats-muted">Run the collector twice or more to unlock trend lines—the first run is your baseline.</p>
       <% end %>
 
+      <h3 id="scan-history-heading" class="stats-history-subheading">Scan history</h3>
       <div class="stats-table-wrap">
-        <table class="stats-history-table">
-          <caption class="visually-hidden">Per-run metrics</caption>
+        <table class="stats-history-table" aria-labelledby="scan-history-heading">
+          <caption class="visually-hidden">Per-run metrics, newest first</caption>
           <thead>
             <tr>
               <th scope="col">Collected</th>
