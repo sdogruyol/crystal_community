@@ -1002,6 +1002,25 @@ main:has(.stats-page) {
   margin-bottom: 0;
 }
 
+a.stats-hbar-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.4rem;
+  margin: -0.35rem -0.4rem;
+  transition: background-color 0.15s ease;
+}
+
+a.stats-hbar-link:hover {
+  background-color: var(--bg-tertiary);
+}
+
+a.stats-hbar-link:focus-visible {
+  outline: 2px solid var(--primary-hover);
+  outline-offset: 2px;
+}
+
 .stats-hbar-top {
   display: flex;
   flex-direction: row;

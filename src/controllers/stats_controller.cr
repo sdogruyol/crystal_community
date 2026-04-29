@@ -11,6 +11,25 @@ class CrystalCommunity::StatsController
     "https://github.com/search?q=#{URI.encode_www_form(q)}&type=repositories"
   end
 
+  # Matches star buckets in github_crystal_stats_collector (labels use en dash U+2013).
+  def self.github_star_bucket_search_url(star_band_label : String) : String
+    q = case star_band_label
+        when "0"
+          "language:crystal stars:0..0"
+        when "1\u201310"
+          "language:crystal stars:1..10"
+        when "11\u2013100"
+          "language:crystal stars:11..100"
+        when "101\u20131000"
+          "language:crystal stars:101..1000"
+        when "1001+"
+          "language:crystal stars:>1000"
+        else
+          "language:crystal"
+        end
+    "https://github.com/search?q=#{URI.encode_www_form(q)}&type=repositories"
+  end
+
   def self.format_int_commas(n : Int64) : String
     return "0" if n == 0
     neg = n < 0

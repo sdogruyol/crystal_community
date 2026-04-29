@@ -99,13 +99,15 @@
           <ul class="stats-hbar-list" aria-label="Repositories by star count">
             <% star_buckets.reverse.each do |(label, count)| %>
               <li class="stats-hbar">
-                <div class="stats-hbar-top">
-                  <span class="stats-hbar-label"><%= label %> stars</span>
-                  <span class="stats-hbar-count"><%= count %></span>
-                </div>
-                <div class="stats-hbar-track" role="presentation">
-                  <div class="stats-hbar-fill stats-hbar-fill--stars" style="width: <%= star_max > 0 ? (100.0 * count / star_max).round(1) : 0 %>%;"></div>
-                </div>
+                <a class="stats-hbar-link" href="<%= HTML.escape(CrystalCommunity::StatsController.github_star_bucket_search_url(label)) %>" target="_blank" rel="noopener noreferrer" aria-label="Search Crystal repositories with <%= HTML.escape("#{label} stars") %> on GitHub">
+                  <div class="stats-hbar-top">
+                    <span class="stats-hbar-label"><%= label %> stars</span>
+                    <span class="stats-hbar-count"><%= count %></span>
+                  </div>
+                  <div class="stats-hbar-track" role="presentation">
+                    <div class="stats-hbar-fill stats-hbar-fill--stars" style="width: <%= star_max > 0 ? (100.0 * count / star_max).round(1) : 0 %>%;"></div>
+                  </div>
+                </a>
               </li>
             <% end %>
           </ul>
