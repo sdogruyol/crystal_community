@@ -1150,6 +1150,16 @@ main:has(.stats-page) {
   white-space: nowrap;
 }
 
+a.stats-topic-pill {
+  text-decoration: none;
+  color: inherit;
+}
+
+a.stats-topic-pill:hover {
+  text-decoration: underline;
+  color: var(--primary-hover);
+}
+
 .stats-topic-body .stats-hbar-top {
   margin-bottom: 0.35rem;
 }

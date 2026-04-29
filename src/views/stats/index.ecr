@@ -126,7 +126,7 @@
                   <span class="stats-topic-num" aria-hidden="true"><%= i + 1 %></span>
                   <div class="stats-topic-body">
                     <div class="stats-hbar-top">
-                      <span class="stats-topic-pill"><%= HTML.escape(topic) %></span>
+                      <a class="stats-topic-pill" href="<%= HTML.escape(CrystalCommunity::StatsController.github_topic_url(topic)) %>" target="_blank" rel="noopener noreferrer"><%= HTML.escape(topic) %></a>
                       <span class="stats-hbar-count"><%= count %></span>
                     </div>
                     <div class="stats-hbar-track" role="presentation">
@@ -145,7 +145,7 @@
                       <span class="stats-topic-num" aria-hidden="true"><%= 11 + j %></span>
                       <div class="stats-topic-body">
                         <div class="stats-hbar-top">
-                          <span class="stats-topic-pill"><%= HTML.escape(topic) %></span>
+                          <a class="stats-topic-pill" href="<%= HTML.escape(CrystalCommunity::StatsController.github_topic_url(topic)) %>" target="_blank" rel="noopener noreferrer"><%= HTML.escape(topic) %></a>
                           <span class="stats-hbar-count"><%= count %></span>
                         </div>
                         <div class="stats-hbar-track" role="presentation">

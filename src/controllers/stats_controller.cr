@@ -1,8 +1,15 @@
 require "json"
 require "kemal"
+require "uri"
 
 class CrystalCommunity::StatsController
   CHART_HISTORY_LIMIT = 90
+
+  # GitHub topic pages list all languages; search narrows to Crystal repos only.
+  def self.github_topic_url(topic : String) : String
+    q = "topic:#{topic} language:crystal"
+    "https://github.com/search?q=#{URI.encode_www_form(q)}&type=repositories"
+  end
 
   def self.format_int_commas(n : Int64) : String
     return "0" if n == 0
