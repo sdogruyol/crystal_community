@@ -46,6 +46,32 @@ class CrystalCommunity::StatsController
     (neg ? "-" : "") + parts.join(",")
   end
 
+  # Screen-reader text for Chart.js canvases (role="img") above scan history.
+  def self.chart_line_aria_label(metric_name : String, labels : Array(String), values : Array(Int64)) : String
+    return "" if labels.size < 2 || values.size < 2
+    first = values.first.not_nil!
+    last = values.last.not_nil!
+    trend = if last > first
+              "rising"
+            elsif last < first
+              "falling"
+            else
+              "flat"
+            end
+    "Line chart of #{metric_name} across #{labels.size} GitHub catalog scans from #{labels.first} to #{labels.last}: #{format_int_commas(first)} at the earliest scan, #{format_int_commas(last)} at the latest, overall #{trend}."
+  end
+
+  def self.chart_line_aria_description(metric_name : String, labels : Array(String), values : Array(Int64)) : String
+    return "" if labels.empty? || values.empty?
+    points = [] of String
+    labels.each_with_index do |label, i|
+      v = values[i]?
+      next unless v
+      points << "#{label}: #{format_int_commas(v)}"
+    end
+    "#{metric_name} by scan date (oldest to newest): #{points.join("; ")}."
+  end
+
   def self.index(env)
     page_title = "Crystal Community: Crystal Ecosystem Stats"
     page_description = "Crystal Community — open source on GitHub, stars, recent activity, new repos, and top topics in the Crystal ecosystem. Updated as we scan public data."
@@ -65,12 +91,43 @@ class CrystalCommunity::StatsController
     github_stat_series = db.recent_chronological(CHART_HISTORY_LIMIT)
 
     stats_chart_json = ""
+    chart_labels = [] of String
+    chart_repos_values = [] of Int64
+    chart_stars_values = [] of Int64
+    chart_repos_aria_label = ""
+    chart_stars_aria_label = ""
+    chart_repos_aria_desc = ""
+    chart_stars_aria_desc = ""
+
     if github_stat_series.size >= 2
+      chart_labels = github_stat_series.map { |s| s.collected_at.to_utc.to_s("%Y-%m-%d") }
+      chart_repos_values = github_stat_series.map { |s| s.repos_scanned.to_i64 }
+      chart_stars_values = github_stat_series.map(&.total_stars)
       stats_chart_json = {
-        "labels" => github_stat_series.map { |s| s.collected_at.to_utc.to_s("%Y-%m-%d") },
-        "repos"  => github_stat_series.map(&.repos_scanned),
-        "stars"  => github_stat_series.map(&.total_stars),
+        "labels" => chart_labels,
+        "repos"  => chart_repos_values,
+        "stars"  => chart_stars_values,
       }.to_json
+      chart_repos_aria_label = chart_line_aria_label(
+        "Crystal repositories scanned",
+        chart_labels,
+        chart_repos_values
+      )
+      chart_stars_aria_label = chart_line_aria_label(
+        "total GitHub stars summed across the public Crystal repository catalog",
+        chart_labels,
+        chart_stars_values
+      )
+      chart_repos_aria_desc = chart_line_aria_description(
+        "Repositories scanned",
+        chart_labels,
+        chart_repos_values
+      )
+      chart_stars_aria_desc = chart_line_aria_description(
+        "Total stars",
+        chart_labels,
+        chart_stars_values
+      )
     end
 
     render "src/views/stats/index.ecr", "src/views/layouts/application.ecr"

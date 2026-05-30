@@ -175,14 +175,26 @@
             <div class="stats-chart-panel">
               <h3 class="stats-chart-panel__title">Repos</h3>
               <div class="stats-chart-canvas-wrap">
-                <canvas id="stats-chart-repos" role="img" aria-label="Crystal repositories scanned over time"></canvas>
+                <canvas
+                  id="stats-chart-repos"
+                  role="img"
+                  aria-label="<%= HTML.escape(chart_repos_aria_label) %>"
+                  aria-describedby="stats-chart-repos-desc"
+                ></canvas>
               </div>
+              <p id="stats-chart-repos-desc" class="visually-hidden"><%= HTML.escape(chart_repos_aria_desc) %></p>
             </div>
             <div class="stats-chart-panel">
               <h3 class="stats-chart-panel__title">Total stars</h3>
               <div class="stats-chart-canvas-wrap">
-                <canvas id="stats-chart-stars" role="img" aria-label="Total GitHub stars over time"></canvas>
+                <canvas
+                  id="stats-chart-stars"
+                  role="img"
+                  aria-label="<%= HTML.escape(chart_stars_aria_label) %>"
+                  aria-describedby="stats-chart-stars-desc"
+                ></canvas>
               </div>
+              <p id="stats-chart-stars-desc" class="visually-hidden"><%= HTML.escape(chart_stars_aria_desc) %></p>
             </div>
           </div>
           <script type="application/json" id="stats-timeseries-data"><%= stats_chart_json %></script>
